@@ -1,7 +1,7 @@
 defaults:
-  - data: vit
-  - model: vit
-  - optimizer: adamw
+  - data: convnext
+  - model: convnext
+  - optimizer: adam
   - trainer: trainer
 
 freeze_epochs: 40

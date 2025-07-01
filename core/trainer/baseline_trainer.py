@@ -14,7 +14,7 @@ from PIL import Image
 from omegaconf import DictConfig
 from pytorch_lightning import LightningDataModule, LightningModule, Trainer, seed_everything
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
-from torch.optim import Adam
+from torch.optim import Adam, AdamW
 from torch.utils.data import DataLoader, Dataset
 from hydra.utils import instantiate
 from sklearn.model_selection import train_test_split
@@ -98,11 +98,18 @@ class BaselineModule(LightningModule):
         f1_metric.reset()
 
     def configure_optimizers(self):
-        opt = Adam(
-            self.parameters(),
-            lr=self.cfg.optimizer.lr,
-            weight_decay=self.cfg.optimizer.weight_decay,
-        )
+        if "Adam" in self.cfg.optimizer._target_:
+            opt = Adam(
+                self.parameters(),
+                lr=self.cfg.optimizer.lr,
+                weight_decay=self.cfg.optimizer.weight_decay,
+            )
+        elif "AdamW" in self.cfg.optimizer._target_:
+            opt = AdamW(
+                self.parameters(),
+                lr=self.cfg.optimizer.lr,
+                weight_decay=self.cfg.optimizer.weight_decay,
+            )
         if "scheduler" in self.cfg and self.cfg.scheduler is not None:
             sch = instantiate(self.cfg.scheduler, optimizer=opt)
             return {"optimizer": opt, "lr_scheduler": sch}

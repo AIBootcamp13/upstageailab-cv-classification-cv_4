@@ -6,6 +6,11 @@ import albumentations as A
 import pandas as pd
 import numpy as np
 from albumentations.pytorch import ToTensorV2
+from albumentations import (
+    Compose, RandomResizedCrop, HorizontalFlip, VerticalFlip, Rotate,
+    ColorJitter, RandomBrightnessContrast, CLAHE,
+    GaussianBlur, CoarseDropout, Resize, Normalize
+)
 from PIL import Image
 from omegaconf import DictConfig
 from pytorch_lightning import LightningDataModule, LightningModule, Trainer, seed_everything
@@ -43,17 +48,42 @@ class ImageDataModule(LightningDataModule):
         self.img_size = cfg.data.img_size
         self.data_path = cfg.data.data_path
 
-        self.train_tf = A.Compose([
-            A.Resize(height=self.img_size, width=self.img_size),
-            A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            ToTensorV2(),
-        ])
+        self.train_tf = Compose([
+            # 크롭/회전/플립
+            RandomResizedCrop(size=(self.img_size, self.img_size), scale=(0.8, 1.0), p=1.0),
+            HorizontalFlip(p=0.5),
+            VerticalFlip(p=0.3),
+            Rotate(limit=15, p=0.5),
 
-        self.val_tf = A.Compose([
-            A.Resize(height=self.img_size, width=self.img_size),
-            A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            ToTensorV2(),
+            # 색상 변화 (RandAugment 대체 조합)
+            ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.2, p=0.5),
+            RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.5),
+            # RandomContrast(limit=0.2, p=0.3),
+            CLAHE(clip_limit=4.0, tile_grid_size=(8, 8), p=0.3),
+
+            # 블러 / 지우기
+            GaussianBlur(blur_limit=(3, 3), sigma_limit=(0.1, 2.0), p=0.3),
+            CoarseDropout(
+                max_holes=1,
+                max_height=int(self.img_size * 0.2),
+                max_width=int(self.img_size * 0.2),
+                fill_value=0,
+                p=0.25
+            ),
+
+            # 정규화 + Tensor
+            Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+            ToTensorV2()
         ])
+        # --- Validation / Test --------------------------------------------------
+        self.val_tf = Compose(
+            [
+                Resize(self.img_size, self.img_size),
+                Normalize(mean=(0.485, 0.456, 0.406),
+                        std=(0.229, 0.224, 0.225)),
+                ToTensorV2(),
+            ]
+        )
 
     def setup(self, stage: str | None = None):
         if stage in ("fit", None):

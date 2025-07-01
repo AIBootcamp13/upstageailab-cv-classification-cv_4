@@ -21,3 +21,8 @@ def seed_everything(seed):
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
+
+def auto_increment_run_suffix(name: str, pad=3):
+    suffix = name.split("-")[-1]
+    next_suffix = str(int(suffix) + 1).zfill(pad)
+    return name.replace(suffix, next_suffix)

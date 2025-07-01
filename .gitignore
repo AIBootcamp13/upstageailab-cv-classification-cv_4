@@ -660,3 +660,4 @@ FodyWeavers.xsd
 *.csv
 .env
 outputs/
+wandb/

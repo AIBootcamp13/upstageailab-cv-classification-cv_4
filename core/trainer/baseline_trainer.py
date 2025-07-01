@@ -18,7 +18,7 @@ from torch.optim import Adam
 from torch.utils.data import DataLoader, Dataset
 from hydra.utils import instantiate
 from sklearn.model_selection import train_test_split
-
+import wandb
     
 class BaselineModule(LightningModule):
     def __init__(self, cfg):
@@ -76,6 +76,10 @@ class BaselineModule(LightningModule):
         f1 = f1_metric.compute()
         self.log(f"{stage}_acc", acc, prog_bar=True)
         self.log(f"{stage}_f1", f1, prog_bar=True)
+
+        wandb.log({f"Accuracy/{stage}": acc})
+        wandb.log({f"F1score/{stage}": f1})
+        
         acc_metric.reset()
         f1_metric.reset()
 

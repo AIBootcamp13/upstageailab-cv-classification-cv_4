@@ -3,3 +3,5 @@ defaults:
   - model: resnet50
   - optimizer: adam
   - trainer: trainer
+
+experiment_name: experiment_0

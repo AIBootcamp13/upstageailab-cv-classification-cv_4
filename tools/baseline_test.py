@@ -1,0 +1,48 @@
+import os
+import sys
+
+sys.path.append(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
+
+import hydra
+import pandas as pd
+import torch
+from omegaconf import DictConfig
+from pytorch_lightning import Trainer, seed_everything
+
+from core.datasets.baseline_dataset import ImageDataModule
+from core.trainer.baseline_trainer import BaselineModule
+
+
+def _find_latest_ckpt() -> str | None:
+    from pathlib import Path
+    ckpts = list(Path(".").rglob("best-*.ckpt"))
+    return str(sorted(ckpts, key=lambda p: p.stat().st_mtime)[-1]) if ckpts else None
+
+
+@hydra.main(version_base=None, config_path="../configs", config_name="config")
+def main(cfg: DictConfig) -> None:
+    seed_everything(cfg.get("seed", 42), workers=True)
+
+    ckpt_path: str | None = cfg.get("test", {}).get("ckpt_path", None)  # hydra override 가능
+    ckpt_path = ckpt_path or _find_latest_ckpt()
+    if ckpt_path is None:
+        raise FileNotFoundError("No checkpoint (.ckpt) found. Train the model first or specify test.ckpt_path=<path>.")
+
+    print(f"Using checkpoint: {ckpt_path}")
+
+    dm = ImageDataModule(cfg)
+    model = BaselineModule.load_from_checkpoint(ckpt_path, cfg=cfg)
+
+    trainer = Trainer(accelerator="auto", devices="auto", precision="bf16-mixed" if cfg.get("bf16", False) else 32)
+    preds = trainer.predict(model, datamodule=dm)
+    preds = torch.cat(preds).cpu().numpy()
+
+    submission = pd.read_csv("data/sample_submission.csv")
+    submission["target"] = preds
+    submission.to_csv("pred.csv", index=False)
+
+
+if __name__ == "__main__":
+    main()

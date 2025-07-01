@@ -25,6 +25,7 @@ import wandb
 from core.models.convnext import ConvNeXt
 from core.models.resnet50 import Resnet50
 from core.models.vit import ViT
+from core.models.swinTransformer import SwinTransformer
 from core.losses.focalloss import FocalLoss
     
 class BaselineModule(LightningModule):
@@ -38,7 +39,9 @@ class BaselineModule(LightningModule):
             self.model = Resnet50(cfg)
         elif "deit" in cfg.model.model.model_name:
             self.model = ViT(cfg)
-
+        elif "swin" in cfg.model.model.model_name:
+            self.model = SwinTransformer(cfg)
+            
         self.criterion = FocalLoss(**cfg.loss)
         # self.criterion = nn.CrossEntropyLoss()
 

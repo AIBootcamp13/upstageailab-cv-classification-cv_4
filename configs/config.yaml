@@ -1,6 +1,6 @@
 defaults:
-  - data: vit
-  - model: vit
+  - data: swinTransformer
+  - model: swinTransformer
   - optimizer: adamw
   - trainer: trainer
   - loss: focalloss

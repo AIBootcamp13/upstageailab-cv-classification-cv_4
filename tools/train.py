@@ -8,11 +8,13 @@ sys.path.append(
 from dotenv import load_dotenv
 load_dotenv()
 
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 import hydra
 import wandb
+import torch
+import numpy as np
 
 from core.datasets.baseline_dataset import ImageDataModule
 from core.trainer.baseline_trainer import BaselineModule
@@ -63,6 +65,35 @@ def main(cfg: DictConfig):
     seed_everything(cfg.seed if "seed" in cfg else 42, workers=True)
 
     data_module = ImageDataModule(cfg)
+    data_module.setup('fit')
+
+    samples = data_module.train_dataloader().dataset.samples
+    labels = [label for _, label in samples]
+    cls_counts = np.bincount(labels)
+    total_cnt  = cls_counts.sum()
+    alpha_np   = total_cnt / (len(cls_counts) * cls_counts)
+    alpha_np   = alpha_np / alpha_np.sum()
+
+    # ---------- 3. cfg 수정 (primitive 타입만!) ----------
+    OmegaConf.set_struct(cfg, False)   # 구조 잠금 해제
+
+    # loss_params는 DictConfig(dict) 여야 함
+    cfg.loss_params.gamma      = 2.0
+    cfg.loss_params.reduction  = "mean"
+    cfg.loss_params.alpha      = alpha_np.tolist()   # ← 리스트(float) OK
+
+    # # scheduler primitive 값 저장
+    # steps_per_epoch            = len(dm.train_dataloader())
+    # cfg.scheduler.total_steps  = steps_per_epoch * cfg.trainer.max_epochs
+    # cfg.scheduler.warmup_steps = steps_per_epoch * 3
+
+    # cfg.loss_params["alpha"] = torch.tensor(total_count / (len(cls_counts) * cls_counts))
+    # cfg.loss_params["gamma"] = 2.0
+    # cfg.loss_params["reduction"] = "mean"
+    
+    cfg.scheduler["total_steps"] = len(data_module.train_dataloader()) * cfg.trainer.max_epochs
+    cfg.scheduler["warmup_steps"] = len(data_module.train_dataloader()) * 3
+    
     model = BaselineModule(cfg)
 
     ckpt_cb = ModelCheckpoint(

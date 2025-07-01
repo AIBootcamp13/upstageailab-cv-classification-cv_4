@@ -21,13 +21,20 @@ from hydra.utils import instantiate
 from sklearn.model_selection import train_test_split
 
 class ImageDataset(Dataset):
-    def __init__(self, data, path, transform=None):
+    def __init__(self, data, path, transform=None, is_test=False):
         if isinstance(data, (str, Path)):
             self.df = pd.read_csv(data).values
         else:
             self.df = data.values
         self.path = path
         self.transform = transform
+
+        self.samples = []
+        if is_test:
+            pass
+        else:
+            for name, target in self.df:
+                self.samples.append((name, target))
 
     def __len__(self):
         return len(self.df)

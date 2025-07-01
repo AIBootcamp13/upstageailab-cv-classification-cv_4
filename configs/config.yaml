@@ -1,8 +1,17 @@
 defaults:
   - data: convnext
   - model: convnext
-  - optimizer: adam
+  - optimizer: adamw
   - trainer: trainer
 
-freeze_epochs: 40
+freeze_epochs: 20
 experiment_name: experiment_0
+
+loss_params:
+  gamma: 2.0
+  reduction: mean
+  alpha: null
+
+scheduler:
+  total_steps: 0
+  warmup_steps: 0

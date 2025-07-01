@@ -12,18 +12,20 @@ import torchmetrics
 from albumentations.pytorch import ToTensorV2
 from PIL import Image
 from omegaconf import DictConfig
+import pytorch_lightning as pl
 from pytorch_lightning import LightningDataModule, LightningModule, Trainer, seed_everything
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 from torch.optim import Adam, AdamW
 from torch.utils.data import DataLoader, Dataset
 from hydra.utils import instantiate
 from sklearn.model_selection import train_test_split
+from transformers import get_cosine_schedule_with_warmup
 import wandb
 
 from core.models.convnext import ConvNeXt
 from core.models.resnet50 import Resnet50
 from core.models.vit import ViT
-
+from core.losses.focalloss import FocalLoss
     
 class BaselineModule(LightningModule):
     def __init__(self, cfg):
@@ -37,7 +39,8 @@ class BaselineModule(LightningModule):
         elif "deit" in cfg.model.model.model_name:
             self.model = ViT(cfg)
 
-        self.criterion = nn.CrossEntropyLoss()
+        self.criterion = FocalLoss(**cfg.loss_params)
+        # self.criterion = nn.CrossEntropyLoss()
 
         n_classes = cfg.model.model.num_classes
 
@@ -94,24 +97,43 @@ class BaselineModule(LightningModule):
         wandb.log({f"Accuracy/{stage}": acc})
         wandb.log({f"F1score/{stage}": f1})
         
+        current_lr = self.trainer.optimizers[0].param_groups[0]["lr"]
+        wandb.log({f"LR/{stage}": current_lr})
+
         acc_metric.reset()
         f1_metric.reset()
 
     def configure_optimizers(self):
-        if "Adam" in self.cfg.optimizer._target_:
-            opt = Adam(
-                self.parameters(),
-                lr=self.cfg.optimizer.lr,
-                weight_decay=self.cfg.optimizer.weight_decay,
-            )
-        elif "AdamW" in self.cfg.optimizer._target_:
+        optimizer_name = str(self.cfg.optimizer._target_)
+        print(f"=========== {optimizer_name} ==============")
+        if "AdamW" in optimizer_name:
+            print("======== AdamW =========")
             opt = AdamW(
                 self.parameters(),
                 lr=self.cfg.optimizer.lr,
                 weight_decay=self.cfg.optimizer.weight_decay,
             )
-        if "scheduler" in self.cfg and self.cfg.scheduler is not None:
-            sch = instantiate(self.cfg.scheduler, optimizer=opt)
-            return {"optimizer": opt, "lr_scheduler": sch}
+
+            scheduler = get_cosine_schedule_with_warmup(
+                opt,
+                num_warmup_steps=self.cfg.scheduler["warmup_steps"],
+                num_training_steps=self.cfg.scheduler["total_steps"]
+            )
+            return {
+                "optimizer":   opt,
+                "lr_scheduler": {
+                    "scheduler":  scheduler,
+                    "interval":   "step",   # ← 매 step마다 step()
+                    "frequency":  1,
+                    "name":       "cosine_warmup",
+                },
+            }
+        else:
+            opt = Adam(
+                self.parameters(),
+                lr=self.cfg.optimizer.lr,
+                weight_decay=self.cfg.optimizer.weight_decay,
+            )
+
+
         return opt
-    

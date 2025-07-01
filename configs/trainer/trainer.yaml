@@ -1,1 +1,2 @@
 max_epochs: 100
+freeze_epochs: 10

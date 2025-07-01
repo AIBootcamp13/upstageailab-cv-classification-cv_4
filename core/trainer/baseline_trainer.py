@@ -39,7 +39,7 @@ class BaselineModule(LightningModule):
         elif "deit" in cfg.model.model.model_name:
             self.model = ViT(cfg)
 
-        self.criterion = FocalLoss(**cfg.loss_params)
+        self.criterion = FocalLoss(**cfg.loss)
         # self.criterion = nn.CrossEntropyLoss()
 
         n_classes = cfg.model.model.num_classes
@@ -78,7 +78,7 @@ class BaselineModule(LightningModule):
         return preds
 
     def on_train_epoch_end(self):
-        if self.current_epoch == self.cfg.freeze_epochs:
+        if self.current_epoch == self.cfg.trainer.freeze_epochs:
             print(f"Epoch {self.current_epoch+1}: Start Feature Extractor unfreeze and full-model fine-tuning")
             self.model.unfreeze()
         self._log_epoch_metrics("train")
@@ -116,8 +116,8 @@ class BaselineModule(LightningModule):
 
             scheduler = get_cosine_schedule_with_warmup(
                 opt,
-                num_warmup_steps=self.cfg.scheduler["warmup_steps"],
-                num_training_steps=self.cfg.scheduler["total_steps"]
+                num_warmup_steps=self.cfg.scheduler.warmup_steps,
+                num_training_steps=self.cfg.scheduler.total_steps
             )
             return {
                 "optimizer":   opt,

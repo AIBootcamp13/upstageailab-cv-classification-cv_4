@@ -1,0 +1,3 @@
+gamma: 2.0
+reduction: mean
+alpha: null

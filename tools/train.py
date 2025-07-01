@@ -57,7 +57,7 @@ def main(cfg: DictConfig):
         config={
             "experiment_name": cfg.experiment_name,
             "model_name": cfg.model.model.model_name,
-            "freeze_epochs": cfg.freeze_epochs,
+            "freeze_epochs": cfg.trainer.freeze_epochs,
             "batch_size": cfg.data.batch_size
         }
     )
@@ -78,9 +78,9 @@ def main(cfg: DictConfig):
     OmegaConf.set_struct(cfg, False)   # 구조 잠금 해제
 
     # loss_params는 DictConfig(dict) 여야 함
-    cfg.loss_params.gamma      = 2.0
-    cfg.loss_params.reduction  = "mean"
-    cfg.loss_params.alpha      = alpha_np.tolist()   # ← 리스트(float) OK
+    cfg.loss.gamma      = 2.0
+    cfg.loss.reduction  = "mean"
+    cfg.loss.alpha      = alpha_np.tolist()   # ← 리스트(float) OK
 
     # # scheduler primitive 값 저장
     # steps_per_epoch            = len(dm.train_dataloader())
@@ -91,8 +91,8 @@ def main(cfg: DictConfig):
     # cfg.loss_params["gamma"] = 2.0
     # cfg.loss_params["reduction"] = "mean"
     
-    cfg.scheduler["total_steps"] = len(data_module.train_dataloader()) * cfg.trainer.max_epochs
-    cfg.scheduler["warmup_steps"] = len(data_module.train_dataloader()) * 3
+    cfg.scheduler.total_steps = len(data_module.train_dataloader()) * cfg.trainer.max_epochs
+    cfg.scheduler.warmup_steps = len(data_module.train_dataloader()) * 3
     
     model = BaselineModule(cfg)
 

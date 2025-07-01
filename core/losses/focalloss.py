@@ -6,6 +6,7 @@ from omegaconf import OmegaConf, DictConfig, ListConfig
 class FocalLoss(nn.Module):
     def __init__(self, alpha=None, gamma=2, reduction='mean'):
         super().__init__()
+        print('initialize focalloss')
         self.alpha = alpha
         self.gamma = gamma
         self.reduction = reduction

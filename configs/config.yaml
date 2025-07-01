@@ -1,18 +1,10 @@
 defaults:
-  - data: convnext
-  - model: convnext
+  - data: vit
+  - model: vit
   - optimizer: adamw
   - trainer: trainer
+  - loss: focalloss
+  - scheduler: cosineAnnealing_lr
   - callback: early_stopping
 
-freeze_epochs: 10
 experiment_name: experiment_0
-
-loss_params:
-  gamma: 2.0
-  reduction: mean
-  alpha: null
-
-scheduler:
-  total_steps: 0
-  warmup_steps: 0

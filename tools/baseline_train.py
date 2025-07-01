@@ -30,7 +30,7 @@ def main(cfg: DictConfig):
     lr_monitor = LearningRateMonitor(logging_interval="step")
 
     trainer = Trainer(
-        max_epochs=10,
+        max_epochs=cfg.trainer.max_epochs,
         accelerator="auto",
         devices="auto",
         precision="bf16-mixed" if cfg.get("bf16", False) else 32,

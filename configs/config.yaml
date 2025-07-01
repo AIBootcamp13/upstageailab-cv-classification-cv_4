@@ -1,5 +1,5 @@
 defaults:
-  # - data: base
-  - model: resnet34
+  - data: resnet50
+  - model: resnet50
   - optimizer: adam
   # - trainer: trainer

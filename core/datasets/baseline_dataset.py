@@ -38,10 +38,10 @@ class ImageDataModule(LightningDataModule):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
-        self.num_workers = 16
-        self.batch_size = 32
-        self.img_size = 32
-        self.data_path = "data"
+        self.num_workers = cfg.data.num_workers
+        self.batch_size = cfg.data.batch_size
+        self.img_size = cfg.data.img_size
+        self.data_path = cfg.data.data_path
 
         self.train_tf = A.Compose([
             A.Resize(height=self.img_size, width=self.img_size),

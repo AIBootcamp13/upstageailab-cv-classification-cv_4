@@ -39,7 +39,7 @@ def main(cfg: DictConfig) -> None:
     preds = trainer.predict(model, datamodule=dm)
     preds = torch.cat(preds).cpu().numpy()
 
-    submission = pd.read_csv("data/sample_submission.csv")
+    submission = pd.read_csv(os.path.join(cfg.data.data_path, "sample_submission.csv"))
     submission["target"] = preds
     submission.to_csv("pred.csv", index=False)
 

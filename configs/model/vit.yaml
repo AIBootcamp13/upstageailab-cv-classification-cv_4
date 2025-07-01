@@ -1,0 +1,5 @@
+model:
+  _target_: timm.create_model
+  model_name: "deit_base_patch16_224"
+  num_classes: 17
+  pretrained: true

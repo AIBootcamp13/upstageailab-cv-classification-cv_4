@@ -22,6 +22,8 @@ import wandb
 
 from core.models.convnext import ConvNeXt
 from core.models.resnet50 import Resnet50
+from core.models.vit import ViT
+
     
 class BaselineModule(LightningModule):
     def __init__(self, cfg):
@@ -32,6 +34,8 @@ class BaselineModule(LightningModule):
             self.model = ConvNeXt(cfg)
         elif "resnet50" in cfg.model.model.model_name:
             self.model = Resnet50(cfg)
+        elif "deit" in cfg.model.model.model_name:
+            self.model = ViT(cfg)
 
         self.criterion = nn.CrossEntropyLoss()
 

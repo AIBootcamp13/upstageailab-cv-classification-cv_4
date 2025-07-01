@@ -1,7 +1,8 @@
 defaults:
-  - data: resnet50
-  - model: resnet50
+  - data: convnext
+  - model: convnext
   - optimizer: adam
   - trainer: trainer
 
+freeze_epochs: 40
 experiment_name: experiment_0

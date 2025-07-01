@@ -19,13 +19,20 @@ from torch.utils.data import DataLoader, Dataset
 from hydra.utils import instantiate
 from sklearn.model_selection import train_test_split
 import wandb
+
+from core.models.convnext import ConvNeXt
+from core.models.resnet50 import Resnet50
     
 class BaselineModule(LightningModule):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
 
-        self.model: nn.Module = instantiate(cfg.model.model)
+        if "convnext" in cfg.model.model.model_name:
+            self.model = ConvNeXt(cfg)
+        elif "resnet50" in cfg.model.model.model_name:
+            self.model = Resnet50(cfg)
+
         self.criterion = nn.CrossEntropyLoss()
 
         n_classes = cfg.model.model.num_classes
@@ -64,6 +71,9 @@ class BaselineModule(LightningModule):
         return preds
 
     def on_train_epoch_end(self):
+        if self.current_epoch == self.cfg.freeze_epochs:
+            print(f"Epoch {self.current_epoch+1}: Start Feature Extractor unfreeze and full-model fine-tuning")
+            self.model.unfreeze()
         self._log_epoch_metrics("train")
 
     def on_validation_epoch_end(self):
@@ -87,6 +97,7 @@ class BaselineModule(LightningModule):
         opt = Adam(
             self.parameters(),
             lr=self.cfg.optimizer.lr,
+            weight_decay=self.cfg.optimizer.weight_decay,
         )
         if "scheduler" in self.cfg and self.cfg.scheduler is not None:
             sch = instantiate(self.cfg.scheduler, optimizer=opt)

@@ -54,6 +54,9 @@ def main(cfg: DictConfig):
         tags=["content-based", "classification"],
         config={
             "experiment_name": cfg.experiment_name,
+            "model_name": cfg.model.model.model_name,
+            "freeze_epochs": cfg.freeze_epochs,
+            "batch_size": cfg.data.batch_size
         }
     )
 

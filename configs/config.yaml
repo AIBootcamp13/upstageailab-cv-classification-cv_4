@@ -1,0 +1,5 @@
+defaults:
+  # - data: base
+  - model: resnet34
+  # - optimizer: adam
+  # - trainer: trainer

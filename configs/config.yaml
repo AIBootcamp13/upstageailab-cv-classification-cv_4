@@ -3,8 +3,9 @@ defaults:
   - model: convnext
   - optimizer: adamw
   - trainer: trainer
+  - callback: early_stopping
 
-freeze_epochs: 20
+freeze_epochs: 10
 experiment_name: experiment_0
 
 loss_params:

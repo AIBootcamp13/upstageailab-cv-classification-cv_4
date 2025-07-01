@@ -95,7 +95,10 @@ class ImageDataModule(LightningDataModule):
     def setup(self, stage: str | None = None):
         if stage in ("fit", None):
             df = pd.read_csv(os.path.join(self.data_path, "train.csv"))
-            train_df, val_df = train_test_split(df, test_size=0.2, random_state=42)
+            targets = df["target"].tolist()
+            # for name, target in df:
+            #     targets.append(target)
+            train_df, val_df = train_test_split(df, test_size=0.2, stratify=targets, random_state=42)
 
             self.train_ds = ImageDataset(
                 train_df, os.path.join(self.data_path, "train"), transform=self.train_tf

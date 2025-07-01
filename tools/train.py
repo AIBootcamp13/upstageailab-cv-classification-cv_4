@@ -10,7 +10,7 @@ load_dotenv()
 
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning import Trainer, seed_everything
-from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
+from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor, EarlyStopping
 import hydra
 import wandb
 import torch
@@ -105,12 +105,13 @@ def main(cfg: DictConfig):
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
 
+    early_stop_cb = EarlyStopping(monitor="val_f1", mode="max", patience=cfg.callback.patience, min_delta=0.0005, verbose=True)
     trainer = Trainer(
         max_epochs=cfg.trainer.max_epochs,
         accelerator="auto",
         devices="auto",
         precision="bf16-mixed" if cfg.get("bf16", False) else 32,
-        callbacks=[ckpt_cb, lr_monitor],
+        callbacks=[ckpt_cb, lr_monitor, early_stop_cb],
         log_every_n_steps=1,
     )
 

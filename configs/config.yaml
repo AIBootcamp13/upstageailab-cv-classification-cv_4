@@ -1,6 +1,6 @@
 defaults:
-  - data: efficientnet
-  - model: efficientnet
+  - data: convnext
+  - model: convnext
   - optimizer: adamw
   - trainer: trainer
   - loss: focalloss

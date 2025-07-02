@@ -117,15 +117,15 @@ class TrainerModule(LightningModule):
             print(f"Epoch {self.current_epoch+1}: Start Feature Extractor unfreeze and full-model fine-tuning")
             self.model.unfreeze()
 
-            optimizer = self.trainer.optimizers[0]
-            for pg in optimizer.param_groups:
-                old_lr = pg["lr"]
-                pg["lr"] = old_lr * 0.1
-                print(f"LR {old_lr:.6f} → {pg['lr']:.6f}")
+            # optimizer = self.trainer.optimizers[0]
+            # for pg in optimizer.param_groups:
+            #     old_lr = pg["lr"]
+            #     pg["lr"] = old_lr * 0.1
+            #     print(f"LR {old_lr:.6f} → {pg['lr']:.6f}")
 
-            scheduler = self.lr_schedulers()
-            if hasattr(scheduler, "base_lrs"):
-                scheduler.base_lrs = [pg["lr"] for pg in optimizer.param_groups]
+            # scheduler = self.lr_schedulers()
+            # if hasattr(scheduler, "base_lrs"):
+            #     scheduler.base_lrs = [pg["lr"] for pg in optimizer.param_groups]
 
         self._log_epoch_metrics("train")
 

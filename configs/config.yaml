@@ -1,6 +1,6 @@
 defaults:
-  - data: swinTransformer
-  - model: swinTransformer
+  - data: convnext
+  - model: convnext
   - optimizer: adamw
   - trainer: trainer
   - loss: focalloss

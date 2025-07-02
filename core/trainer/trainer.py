@@ -29,7 +29,7 @@ from core.models.swinTransformer import SwinTransformer
 from core.losses.focalloss import FocalLoss
 from core.callbacks.ema import EMA
 
-class BaselineModule(LightningModule):
+class TrainerModule(LightningModule):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg

@@ -46,7 +46,7 @@ class ImageDataset(Dataset):
             img = self.transform(image=img)['image']
         return img, target
     
-class ImageDataModule(LightningDataModule):
+class DatasetModule(LightningDataModule):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg

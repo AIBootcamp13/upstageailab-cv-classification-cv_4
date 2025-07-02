@@ -16,8 +16,8 @@ import wandb
 import torch
 import numpy as np
 
-from core.datasets.baseline_dataset import ImageDataModule
-from core.trainer.baseline_trainer import BaselineModule
+from core.datasets.dataset import DatasetModule
+from core.trainer.trainer import TrainerModule
 from core.utils.utils import auto_increment_run_suffix
 
 def get_runs(project_name):
@@ -64,7 +64,7 @@ def main(cfg: DictConfig):
 
     seed_everything(cfg.seed if "seed" in cfg else 42, workers=True)
 
-    data_module = ImageDataModule(cfg)
+    data_module = DatasetModule(cfg)
     data_module.setup('fit')
 
     samples = data_module.train_dataloader().dataset.samples
@@ -94,7 +94,7 @@ def main(cfg: DictConfig):
     cfg.scheduler.total_steps = len(data_module.train_dataloader()) * cfg.trainer.max_epochs
     cfg.scheduler.warmup_steps = len(data_module.train_dataloader()) * 3
     
-    model = BaselineModule(cfg)
+    model = TrainerModule(cfg)
 
     ckpt_cb = ModelCheckpoint(
         monitor="val_f1",

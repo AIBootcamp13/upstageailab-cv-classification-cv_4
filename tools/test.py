@@ -14,8 +14,8 @@ import torch
 from omegaconf import DictConfig
 from pytorch_lightning import Trainer, seed_everything
 
-from core.datasets.baseline_dataset import ImageDataModule
-from core.trainer.baseline_trainer import BaselineModule
+from core.datasets.dataset import DatasetModule
+from core.trainer.trainer import TrainerModule
 
 
 def _find_latest_ckpt() -> str | None:
@@ -35,8 +35,8 @@ def main(cfg: DictConfig) -> None:
 
     print(f"Using checkpoint: {ckpt_path}")
 
-    dm = ImageDataModule(cfg)
-    model = BaselineModule.load_from_checkpoint(ckpt_path, cfg=cfg)
+    dm = DatasetModule(cfg)
+    model = TrainerModule.load_from_checkpoint(ckpt_path, cfg=cfg)
 
     trainer = Trainer(accelerator="auto", devices="auto", precision="bf16-mixed" if cfg.get("bf16", False) else 32)
     preds = trainer.predict(model, datamodule=dm)

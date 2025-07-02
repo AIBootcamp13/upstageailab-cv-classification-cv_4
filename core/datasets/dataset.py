@@ -92,19 +92,33 @@ class DatasetModule(LightningDataModule):
             ]
         )
 
+        self.train_idx = None
+        self.val_idx = None
+        self.train_df = None
+        self.val_df = None
+    
+    def set_split_idx(self, train_idx, val_idx):
+        self.train_idx = train_idx
+        self.val_idx = val_idx
+
     def setup(self, stage: str | None = None):
         if stage in ("fit", None):
             df = pd.read_csv(os.path.join(self.data_path, "train.csv"))
-            targets = df["target"].tolist()
-            # for name, target in df:
-            #     targets.append(target)
-            train_df, val_df = train_test_split(df, test_size=0.2, stratify=targets, random_state=42)
+
+            if self.train_idx is not None and self.val_idx is not None:
+                self.train_df = df.iloc[self.train_idx].reset_index(drop=True)
+                self.val_df = df.iloc[self.val_idx].reset_index(drop=True)
+            else:
+                targets = df["target"].tolist()
+                self.train_df, self.val_df = train_test_split(
+                    df, test_size=0.2, stratify=targets, random_state=42
+                )
 
             self.train_ds = ImageDataset(
-                train_df, os.path.join(self.data_path, "train"), transform=self.train_tf
+                self.train_df, os.path.join(self.data_path, "train"), transform=self.train_tf
             )
             self.val_ds = ImageDataset(
-                val_df, os.path.join(self.data_path, "train"), transform=self.val_tf
+                self.val_df, os.path.join(self.data_path, "train"), transform=self.val_tf
             )
 
         if stage in ("test", "predict", None):

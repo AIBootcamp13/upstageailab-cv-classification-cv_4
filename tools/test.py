@@ -39,8 +39,9 @@ def main(cfg: DictConfig) -> None:
     model = TrainerModule.load_from_checkpoint(ckpt_path, cfg=cfg)
 
     trainer = Trainer(accelerator="auto", devices="auto", precision="bf16-mixed" if cfg.get("bf16", False) else 32)
-    preds = trainer.predict(model, datamodule=dm)
-    preds = torch.cat(preds).cpu().numpy()
+    preds = trainer.predict(model, datamodule=dm)       
+    preds = torch.cat(preds, dim=0)                     
+    preds = torch.argmax(preds, dim=1).cpu().numpy()    
 
     submission = pd.read_csv(os.path.join(cfg.data.data_path, "sample_submission.csv"))
     submission["target"] = preds

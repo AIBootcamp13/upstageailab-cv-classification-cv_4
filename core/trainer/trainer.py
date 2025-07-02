@@ -15,6 +15,7 @@ from omegaconf import DictConfig
 import pytorch_lightning as pl
 from pytorch_lightning import LightningDataModule, LightningModule, Trainer, seed_everything
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
+import torch.nn.functional as F  
 from torch.optim import Adam, AdamW
 from torch.utils.data import DataLoader, Dataset
 from hydra.utils import instantiate
@@ -63,7 +64,7 @@ class TrainerModule(LightningModule):
     
     def on_train_start(self):
         if self.cfg.trainer.use_ema == True:
-            self.ema = EMA(self.model, decay=0.995)
+            self.ema = EMA(self.model, decay=0.999)
             if hasattr(self.ema, "ema_model"):
                 self.ema.ema_model.to(self.device)
                 self.ema.ema_model.eval()
@@ -110,7 +111,7 @@ class TrainerModule(LightningModule):
             logits = self.ema.ema_model(x)
         else:
             logits = self(x)
-        return torch.argmax(logits, dim=1)
+        return F.softmax(logits, dim=1)
 
     def on_train_epoch_end(self):
         if self.current_epoch == self.cfg.trainer.freeze_epochs:

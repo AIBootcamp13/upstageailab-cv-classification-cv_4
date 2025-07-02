@@ -105,7 +105,7 @@ def main(cfg: DictConfig):
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
 
-    early_stop_cb = EarlyStopping(monitor="val_f1", mode="max", patience=cfg.callback.patience, min_delta=0.0005, verbose=True)
+    early_stop_cb = EarlyStopping(monitor=cfg.callback.monitor, mode=cfg.callback.mode, patience=cfg.callback.patience, min_delta=0.0005, verbose=True)
     trainer = Trainer(
         max_epochs=cfg.trainer.max_epochs,
         accelerator="auto",

@@ -27,7 +27,8 @@ from core.models.resnet50 import Resnet50
 from core.models.vit import ViT
 from core.models.swinTransformer import SwinTransformer
 from core.losses.focalloss import FocalLoss
-    
+from core.callbacks.ema import EMA
+
 class BaselineModule(LightningModule):
     def __init__(self, cfg):
         super().__init__()
@@ -52,8 +53,21 @@ class BaselineModule(LightningModule):
         self.train_f1 = torchmetrics.F1Score(task="multiclass", num_classes=n_classes, average="macro")
         self.val_f1 = torchmetrics.F1Score(task="multiclass", num_classes=n_classes, average="macro")
 
+        self.ema = None
+
     def forward(self, x):
         return self.model(x)
+    
+    def on_train_start(self):
+        if self.cfg.trainer.use_ema == True:
+            self.ema = EMA(self.model, decay=0.995)
+            if hasattr(self.ema, "ema_model"):
+                self.ema.ema_model.to(self.device)
+                self.ema.ema_model.eval()
+
+    def on_predict_start(self):
+        if self.cfg.trainer.use_ema == True and self.ema is not None:
+            self.ema.ema_model.to(self.device)
     
     def _shared_step(self, batch, stage: str):
         x, y = batch
@@ -64,26 +78,42 @@ class BaselineModule(LightningModule):
         f1_metric = getattr(self, f"{stage}_f1")
         acc_metric.update(logits, y)
         f1_metric.update(logits, y)
-
+    
         self.log(f"{stage}_loss", loss, prog_bar=(stage == "val"), on_step=False, on_epoch=True)
         return loss
 
     def training_step(self, batch, batch_idx):
         return self._shared_step(batch, "train")
+    
+    def on_train_batch_end(self, outputs, batch, batch_idx):
+        
+        if self.cfg.trainer.use_ema == True and self.ema is not None:
+            if self.current_epoch >= self.cfg.trainer.ema_update_epochs:
+                self.ema.update(self.model)
 
     def validation_step(self, batch, batch_idx):
+        if self.cfg.trainer.use_ema == True and self.ema is not None:
+            backup_state = {k: v.detach().clone() for k, v in self.model.state_dict().items()}
+            self.model.load_state_dict(self.ema.state_dict())
+            loss = self._shared_step(batch, "val")
+            self.model.load_state_dict(backup_state)
+            return loss
+        
         self._shared_step(batch, "val")
 
     def predict_step(self, batch, batch_idx):
         x, _ = batch
-        logits = self(x)
-        preds = torch.argmax(logits, dim=1)
-        return preds
+        if self.cfg.trainer.use_ema == True and self.ema is not None:
+            logits = self.ema.ema_model(x)
+        else:
+            logits = self(x)
+        return torch.argmax(logits, dim=1)
 
     def on_train_epoch_end(self):
         if self.current_epoch == self.cfg.trainer.freeze_epochs:
             print(f"Epoch {self.current_epoch+1}: Start Feature Extractor unfreeze and full-model fine-tuning")
             self.model.unfreeze()
+
         self._log_epoch_metrics("train")
 
     def on_validation_epoch_end(self):
@@ -105,6 +135,17 @@ class BaselineModule(LightningModule):
 
         acc_metric.reset()
         f1_metric.reset()
+
+    def on_save_checkpoint(self, checkpoint):
+        if self.cfg.trainer.use_ema == True and self.ema is not None:
+            checkpoint['ema_state'] = self.ema.state_dict()
+    
+    def on_load_checkpoint(self, checkpoint):
+        if checkpoint.get("ema_state") and self.cfg.trainer.use_ema == True:
+            decay = float(getattr(self.cfg.trainer, "ema_decay", 0.995))
+            self.ema = EMA(self.model, decay=decay)
+            self.ema.ema_model.load_state_dict(checkpoint["ema_state"])
+            self.ema.ema_model.eval()
 
     def configure_optimizers(self):
         optimizer_name = str(self.cfg.optimizer._target_)

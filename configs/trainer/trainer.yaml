@@ -1,4 +1,4 @@
 max_epochs: 100
-freeze_epochs: 10
+freeze_epochs: 15
 use_ema: true
 ema_update_epochs: 0

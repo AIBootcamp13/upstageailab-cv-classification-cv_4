@@ -26,6 +26,7 @@ from core.models.convnext import ConvNeXt
 from core.models.resnet50 import Resnet50
 from core.models.vit import ViT
 from core.models.swinTransformer import SwinTransformer
+from core.models.efficientnet import EfficientNet
 from core.losses.focalloss import FocalLoss
 from core.callbacks.ema import EMA
 
@@ -42,6 +43,8 @@ class TrainerModule(LightningModule):
             self.model = ViT(cfg)
         elif "swin" in cfg.model.model.model_name:
             self.model = SwinTransformer(cfg)
+        elif "efficientnet" in cfg.model.model.model_name:
+            self.model = EfficientNet(cfg)
             
         self.criterion = FocalLoss(**cfg.loss)
         # self.criterion = nn.CrossEntropyLoss()
@@ -113,6 +116,16 @@ class TrainerModule(LightningModule):
         if self.current_epoch == self.cfg.trainer.freeze_epochs:
             print(f"Epoch {self.current_epoch+1}: Start Feature Extractor unfreeze and full-model fine-tuning")
             self.model.unfreeze()
+
+            optimizer = self.trainer.optimizers[0]
+            for pg in optimizer.param_groups:
+                old_lr = pg["lr"]
+                pg["lr"] = old_lr * 0.1
+                print(f"LR {old_lr:.6f} → {pg['lr']:.6f}")
+
+            scheduler = self.lr_schedulers()
+            if hasattr(scheduler, "base_lrs"):
+                scheduler.base_lrs = [pg["lr"] for pg in optimizer.param_groups]
 
         self._log_epoch_metrics("train")
 

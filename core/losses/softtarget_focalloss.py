@@ -11,29 +11,32 @@ class SoftTargetFocalLoss(nn.Module):
         self.gamma = gamma
         self.reduction = reduction
 
+        if self.alpha is not None:
+            if isinstance(self.alpha, (DictConfig, ListConfig)):
+                self.alpha = OmegaConf.to_container(self.alpha, resolve=True)
+            if isinstance(self.alpha, list):
+                self.alpha = torch.tensor(self.alpha, dtype=torch.float32)
+
     def forward(self, logits, targets):
-        log_probs = F.log_softmax(logits, dim=1)
-        probs = torch.exp(log_probs)
+        alpha = self.alpha.to(targets.device)
+        if targets.dim() == 1:
+            targets = F.one_hot(targets, num_classes=logits.size(1)).float()
+        log_p = F.log_softmax(logits, dim=1)
+        p = log_p.exp()        
 
-        if targets.dtype == torch.float32 and targets.dim() == 2:
-            if self.alpha is not None:
-                alpha_t = self.alpha.unsqueeze(0)
-                alpha_factor = targets * alpha_t
-            else:
-                alpha_factor = targets
-
-            focal_weight = (1.0 - probs) ** self.gamma
-            loss = -alpha_factor * focal_weight * log_probs
-            loss = loss.sum(dim=1)
+        ce_per_cls = -targets * log_p
+        focal_per  = (1 - p).pow(self.gamma)
+        if alpha is not None:
+            alpha = alpha.to(logits.device)
+            fl = alpha * ce_per_cls * focal_per
         else:
-            ce_loss = F.cross_entropy(logits, targets, reduction='none')
-            pt = torch.exp(-ce_loss)
-            at = self.alpha.gather(0, targets) if self.alpha is not None else 1.0
-            loss = at * (1 - pt) ** self.gamma * ce_loss
-        
-        if self.reduction == 'mean':
+            fl = ce_per_cls * focal_per
+
+        loss = fl.sum(dim=1)
+
+        if self.reduction == "mean":
             return loss.mean()
-        elif self.reduction == 'sum':
+        elif self.reduction == "sum":
             return loss.sum()
-        else:
+        else:                                 
             return loss

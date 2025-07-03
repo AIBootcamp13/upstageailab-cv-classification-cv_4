@@ -111,9 +111,9 @@ def main(cfg: DictConfig):
         alpha_np   = total_cnt / (len(cls_counts) * cls_counts)
         alpha_np   = alpha_np / alpha_np.sum()
 
-        cfg.loss.gamma      = 2.0
-        cfg.loss.reduction  = "mean"
-        cfg.loss.alpha      = alpha_np.tolist()
+        cfg.loss.loss.gamma      = 2.0
+        cfg.loss.loss.reduction  = "mean"
+        cfg.loss.loss.alpha      = alpha_np.tolist()
         
         cfg.scheduler.total_steps = len(data_module.train_dataloader()) * cfg.trainer.max_epochs
         cfg.scheduler.warmup_steps = len(data_module.train_dataloader()) * 3

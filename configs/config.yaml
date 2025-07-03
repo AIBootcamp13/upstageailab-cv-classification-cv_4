@@ -3,7 +3,7 @@ defaults:
   - model: convnext
   - optimizer: adamw
   - trainer: trainer
-  - loss: focalloss
+  - loss: softtarget_focalloss
   - scheduler: cosineAnnealing_lr
   - callback: early_stopping
 

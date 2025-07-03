@@ -29,6 +29,7 @@ from core.models.vit import ViT
 from core.models.swinTransformer import SwinTransformer
 from core.models.efficientnet import EfficientNet
 from core.losses.focalloss import FocalLoss
+from core.losses.softtarget_focalloss import SoftTargetFocalLoss
 from core.callbacks.ema import EMA
 
 class TrainerModule(LightningModule):
@@ -46,8 +47,12 @@ class TrainerModule(LightningModule):
             self.model = SwinTransformer(cfg)
         elif "efficientnet" in cfg.model.model.model_name:
             self.model = EfficientNet(cfg)
-            
-        self.criterion = FocalLoss(**cfg.loss)
+        
+        if cfg.loss.loss_name == "focalloss":
+            self.criterion = FocalLoss(**cfg.loss.loss)
+        elif cfg.loss.loss_name == "softtarget_focalloss":
+            self.criterion = SoftTargetFocalLoss(**cfg.loss.loss)
+
         # self.criterion = nn.CrossEntropyLoss()
 
         n_classes = cfg.model.model.num_classes

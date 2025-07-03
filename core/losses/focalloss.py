@@ -18,14 +18,14 @@ class FocalLoss(nn.Module):
                 self.alpha = torch.tensor(self.alpha, dtype=torch.float32)
         
     def forward(self, logits, targets):
-        self.alpha = self.alpha.to(targets.device)
+        alpha = self.alpha.to(targets.device)
         # self.gamma = self.gamma.to(logits.device)
 
         ce_loss = F.cross_entropy(logits, targets, reduction="none")
         pt = torch.exp(-ce_loss)              
 
-        if self.alpha is not None:
-            at = self.alpha[targets]           
+        if alpha is not None:
+            at = alpha[targets]           
         else:
             at = 1.0
 

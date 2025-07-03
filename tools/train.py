@@ -78,9 +78,9 @@ def main(cfg: DictConfig):
     OmegaConf.set_struct(cfg, False)   # 구조 잠금 해제
 
     # loss_params는 DictConfig(dict) 여야 함
-    cfg.loss.gamma      = 2.0
-    cfg.loss.reduction  = "mean"
-    cfg.loss.alpha      = alpha_np.tolist()   # ← 리스트(float) OK
+    cfg.loss.loss.gamma      = 2.0
+    cfg.loss.loss.reduction  = "mean"
+    cfg.loss.loss.alpha      = alpha_np.tolist()   # ← 리스트(float) OK
 
     # # scheduler primitive 값 저장
     # steps_per_epoch            = len(dm.train_dataloader())

@@ -22,6 +22,7 @@ from hydra.utils import instantiate
 from sklearn.model_selection import train_test_split
 from transformers import get_cosine_schedule_with_warmup
 import wandb
+from timm.data.mixup import Mixup
 
 from core.models.convnext import ConvNeXt
 from core.models.resnet50 import Resnet50
@@ -64,6 +65,19 @@ class TrainerModule(LightningModule):
 
         self.ema = None
 
+        if cfg.trainer.use_mixup == True:
+            self.mixup = Mixup(
+                mixup_alpha=0.4,
+                cutmix_alpha=0.0,
+                prob=1.0,
+                switch_prob= 0.0,
+                mode="batch",
+                label_smoothing=0.0,
+                num_classes=n_classes
+            )
+        else:
+            self.mixup = None
+
     def forward(self, x):
         return self.model(x)
     
@@ -80,13 +94,20 @@ class TrainerModule(LightningModule):
     
     def _shared_step(self, batch, stage: str):
         x, y = batch
+
+        if stage == "train":
+            if self.mixup is not None:
+                x, y = self.mixup(x, y)
+
         logits = self(x)
         loss = self.criterion(logits, y)
 
+        y_hard = y.argmax(1) if y.ndim == 2 else y
+
         acc_metric = getattr(self, f"{stage}_acc")
         f1_metric = getattr(self, f"{stage}_f1")
-        acc_metric.update(logits, y)
-        f1_metric.update(logits, y)
+        acc_metric.update(logits, y_hard)
+        f1_metric.update(logits, y_hard)
     
         self.log(f"{stage}_loss", loss, prog_bar=(stage == "val"), on_step=False, on_epoch=True)
         return loss

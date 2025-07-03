@@ -64,7 +64,7 @@ class TrainerModule(LightningModule):
     
     def on_train_start(self):
         if self.cfg.trainer.use_ema == True:
-            self.ema = EMA(self.model, decay=0.999)
+            self.ema = EMA(self.model, decay=0.995)
             if hasattr(self.ema, "ema_model"):
                 self.ema.ema_model.to(self.device)
                 self.ema.ema_model.eval()

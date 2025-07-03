@@ -32,7 +32,7 @@ def _find_fold_latest_ckpts(pattern: str = "lightning_logs/checkpoints/fold_*/be
 def main(cfg: DictConfig) -> None:
     seed_everything(cfg.get("seed", 42), workers=True)
 
-    ckpt_paths = _find_fold_latest_ckpts("lightning_logs/version_87/checkpoints/best-f*.ckpt")
+    ckpt_paths = _find_fold_latest_ckpts("lightning_logs/checkpoints/fold_*/best-*.ckpt")
 
     if not ckpt_paths:
         raise FileNotFoundError(

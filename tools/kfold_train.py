@@ -120,7 +120,7 @@ def main(cfg: DictConfig):
         cfg.scheduler.total_steps = len(data_module.train_dataloader()) * cfg.trainer.max_epochs
         cfg.scheduler.warmup_steps = len(data_module.train_dataloader()) * 3
 
-        if cfg.trainer.use_hnm == True:
+        if cfg.trainer.hnm.use_hnm == True:
             model = HardNegativeMiningTrainerModule(cfg)
         else:
             model = TrainerModule(cfg)
@@ -137,7 +137,7 @@ def main(cfg: DictConfig):
 
         early_stop_cb = EarlyStopping(monitor=cfg.callback.monitor, mode=cfg.callback.mode, patience=cfg.callback.patience, min_delta=0.0005, verbose=True)
 
-        if cfg.trainer.use_hnm == True:
+        if cfg.trainer.hnm.use_hnm == True:
             hnm_cb = HNMCallback(data_module.train_df, train_idx=train_idx, cfg=cfg)
             callbacks = [ckpt_cb, lr_monitor, early_stop_cb, hnm_cb]
         else:

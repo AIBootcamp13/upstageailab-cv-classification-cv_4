@@ -57,7 +57,7 @@ def main(cfg: DictConfig) -> None:
     )
 
     for path in ckpt_paths:
-        if cfg.trainer.use_hnm == True:
+        if cfg.trainer.hnm.use_hnm == True:
             model = HardNegativeMiningTrainerModule.load_from_checkpoint(path, cfg=cfg)
         else:
             model = TrainerModule.load_from_checkpoint(path, cfg=cfg)

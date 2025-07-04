@@ -134,25 +134,30 @@ class HardNegativeMiningTrainerModule(LightningModule):
         x, y = batch
 
         if stage == "train":
-            if self.mixup is not None:
-                x, y = self.mixup(x, y)
+            if self.cfg.trainer.hnm.use_hnm:
+                if self.current_epoch >= self.cfg.trainer.hnm.stop_epoch:
+                    x, y = self.mixup(x, y)
+            else:
+                if self.mixup is not None:
+                    x, y = self.mixup(x, y)
 
         logits = self(x)
         loss = self.criterion(logits, y)
 
         # for hard negative mining
         # ── per-sample loss 누적 (mixup OFF일 때만)
-        if stage == "train":
-            with torch.no_grad():
-                hard = y
-                if y.ndim == 2:  
-                    hard = y.argmax(1)
-                l_each = F.cross_entropy(logits, hard, reduction="none")  # B
-                for cls in range(self.cfg.model.model.num_classes):
-                    m = hard == cls
-                    if m.any():
-                        self._cls_loss_sum[cls]   += l_each[m].sum()
-                        self._cls_sample_cnt[cls] += m.sum()
+        if stage == "train" and self.cfg.trainer.hnm.use_hnm:
+            if self.current_epoch < self.cfg.trainer.hnm.stop_epoch:
+                with torch.no_grad():
+                    hard = y
+                    if y.ndim == 2:  
+                        hard = y.argmax(1)
+                    l_each = F.cross_entropy(logits, hard, reduction="none")  # B
+                    for cls in range(self.cfg.model.model.num_classes):
+                        m = hard == cls
+                        if m.any():
+                            self._cls_loss_sum[cls]   += l_each[m].sum()
+                            self._cls_sample_cnt[cls] += m.sum()
 
 
         y_hard = y.argmax(1) if y.ndim == 2 else y

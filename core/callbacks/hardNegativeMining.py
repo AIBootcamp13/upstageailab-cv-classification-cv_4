@@ -15,7 +15,16 @@ class HNMCallback(Callback):
         self.cfg       = cfg
         self.aug_cnt   = {c: 0 for c in base_df["target"].unique()}
 
+        self.is_running = self.cfg.trainer.hnm.use_hnm
+
     def on_train_epoch_end(self, trainer, pl_module):
+        if trainer.current_epoch >= self.cfg.trainer.hnm.stop_epoch:
+            if self.is_running:
+                print('HNM Callback Stopped')
+                self.is_running = False
+        
+        if not self.is_running:
+            return
         per_cls = pl_module.per_class_loss()
         epoch   = trainer.current_epoch
 

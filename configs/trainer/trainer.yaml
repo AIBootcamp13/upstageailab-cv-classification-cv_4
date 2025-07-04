@@ -2,7 +2,7 @@ max_epochs: 100
 freeze_epochs: 10
 use_ema: true
 ema_update_epochs: 0
-use_mixup: false
+use_mixup: true
 hnm:
   use_hnm: true
   stop_epoch: 10

@@ -131,7 +131,8 @@ class DatasetModule(LightningDataModule):
         self.train_ds = ImageDataset(
             new_df, 
             os.path.join(self.data_path, "train"),
-            transform=self.train_tf
+            transform=self.train_tf,
+            drop_last=True,
         )
 
     def train_dataloader(self):
@@ -141,6 +142,7 @@ class DatasetModule(LightningDataModule):
             shuffle=True,
             num_workers=self.num_workers,
             pin_memory=True,
+            drop_last=True
         )
 
     def val_dataloader(self):

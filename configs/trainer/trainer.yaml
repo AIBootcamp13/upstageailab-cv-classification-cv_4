@@ -5,4 +5,4 @@ ema_update_epochs: 0
 use_mixup: true
 hnm:
   use_hnm: true
-  stop_epoch: 10
+  stop_epoch: 15

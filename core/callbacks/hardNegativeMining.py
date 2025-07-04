@@ -1,29 +1,49 @@
+from typing import List
+
 import pandas as pd
 from pytorch_lightning import Callback
 
 from core.datasets.dataset import ImageDataset
 
-class HardNegativeMiningCallback(Callback):
-    def __init__(self, base_df: pd.DataFrame, train_idx: list[int], class_aug_cnt: dict[int, int]):
-        self.baes_df = base_df
-        self.train_idx = train_idx
-        self.class_aug_cnt = class_aug_cnt
-    
+class HNMCallback(Callback):
+    def __init__(self,
+                 base_df: pd.DataFrame,
+                 train_idx: List[int],
+                 cfg):
+        self.base_df = base_df
+        self.aug_df = base_df
+        self.cfg       = cfg
+        self.aug_cnt   = {c: 0 for c in base_df["target"].unique()}
+
     def on_train_epoch_end(self, trainer, pl_module):
-        per_cls_loss = pl_module.compute_per_class_loss()
-        epoch = trainer.current_epoch
+        per_cls = pl_module.per_class_loss()
+        epoch   = trainer.current_epoch
 
-        new_df = pl_module.prepare_train_df_for_epoch(
-            base_df = self.base_df,
-            per_cls_loss = per_cls_loss,
-            epoch = epoch,
-            class_aug_cnt = self.class_aug_cnt,
-            train_idx = self.train_idx,
-        )
-        if new_df is self.base_df:
+        max_aug = 5
+        topk    = 3
+
+        worst = [cls for cls, _ in sorted(per_cls.items(),
+                                          key=lambda kv: kv[1],
+                                          reverse=True)
+                 if self.aug_cnt[cls] < max_aug][:topk]
+        if not worst:
             return
-        
-        new_dataset = ImageDataset(new_df, transform=pl_module.train_df)
-        trainer.train_dataloader().dataset.dataset = new_dataset
 
-        print(f"▶ Train set size → {len(new_dataset)}")
+        # # fold-train subset에서 해당 클래스 행 복제
+        # subset = self.base_df.iloc[self.train_idx]
+        # aug_df = subset[subset["target"].isin(worst)].copy()
+        # new_df = pd.concat([self.base_df, aug_df], ignore_index=True)
+
+        new_aug_df = self.base_df[self.base_df["target"].isin(worst)].copy()
+
+        self.aug_df = pd.concat([self.aug_df, new_aug_df], ignore_index=True)
+
+        # 카운트 증가
+        for cls in worst:
+            self.aug_cnt[cls] += 1
+
+        # train_tf = trainer.datamodule.train_ds.transform
+        trainer.datamodule.set_train_dataset(self.aug_df)
+
+        print(f"[HNM] Epoch {epoch+1} → Worst Class {worst} Copy(+{len(new_aug_df)}) "
+              f"Total {len(self.aug_df)}")

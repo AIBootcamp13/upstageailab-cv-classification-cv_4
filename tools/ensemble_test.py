@@ -18,6 +18,7 @@ from pytorch_lightning import Trainer, seed_everything
 
 from core.datasets.dataset import DatasetModule
 from core.trainer.trainer import TrainerModule
+from core.trainer.HNMTrainer import HardNegativeMiningTrainerModule
 
 
 def _find_latest_ckpt() -> str | None:
@@ -56,7 +57,10 @@ def main(cfg: DictConfig) -> None:
     )
 
     for path in ckpt_paths:
-        model = TrainerModule.load_from_checkpoint(path, cfg=cfg)
+        if cfg.trainer.use_hnm == True:
+            model = HardNegativeMiningTrainerModule.load_from_checkpoint(path, cfg=cfg)
+        else:
+            model = TrainerModule.load_from_checkpoint(path, cfg=cfg)
         model.eval()
 
         preds = trainer.predict(model, datamodule=dm)

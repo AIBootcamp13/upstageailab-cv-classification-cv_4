@@ -132,7 +132,6 @@ class DatasetModule(LightningDataModule):
             new_df, 
             os.path.join(self.data_path, "train"),
             transform=self.train_tf,
-            drop_last=True,
         )
 
     def train_dataloader(self):

@@ -92,6 +92,8 @@ class DatasetModule(LightningDataModule):
             ]
         )
 
+        self.test_tf = self.val_tf
+
         self.train_idx = None
         self.val_idx = None
         self.train_df = None
@@ -129,7 +131,7 @@ class DatasetModule(LightningDataModule):
         if stage in ("test", "predict", None):
             df = pd.read_csv(os.path.join(self.data_path, "sample_submission.csv"))
             self.test_ds = ImageDataset(
-                df, os.path.join(self.data_path, "test"), transform=self.val_tf
+                df, os.path.join(self.data_path, "test"), transform=self.test_tf
             )
 
     def set_train_dataset(self, new_df):

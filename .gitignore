@@ -661,3 +661,4 @@ FodyWeavers.xsd
 .env
 outputs/
 wandb/
+augraphy_cache/

@@ -18,6 +18,8 @@ import numpy as np
 
 from core.datasets.dataset import DatasetModule
 from core.trainer.trainer import TrainerModule
+from core.trainer.HNMTrainer import HardNegativeMiningTrainerModule
+from core.callbacks.hardNegativeMining import HNMCallback
 from core.utils.utils import auto_increment_run_suffix
 
 def get_runs(project_name):
@@ -94,7 +96,10 @@ def main(cfg: DictConfig):
     cfg.scheduler.total_steps = len(data_module.train_dataloader()) * cfg.trainer.max_epochs
     cfg.scheduler.warmup_steps = len(data_module.train_dataloader()) * 3
     
-    model = TrainerModule(cfg)
+    if cfg.trainer.hnm.use_hnm == True:
+        model = HardNegativeMiningTrainerModule(cfg)
+    else:
+        model = TrainerModule(cfg)
 
     ckpt_cb = ModelCheckpoint(
         monitor="val_f1",
@@ -106,13 +111,21 @@ def main(cfg: DictConfig):
     lr_monitor = LearningRateMonitor(logging_interval="step")
 
     early_stop_cb = EarlyStopping(monitor=cfg.callback.monitor, mode=cfg.callback.mode, patience=cfg.callback.patience, min_delta=0.0005, verbose=True)
+
+    if cfg.trainer.hnm.use_hnm == True:
+        hnm_cb = HNMCallback(data_module.train_df, train_idx=data_module.train_idx, cfg=cfg)
+        callbacks = [ckpt_cb, lr_monitor, early_stop_cb, hnm_cb]
+    else:
+        callbacks = [ckpt_cb, lr_monitor, early_stop_cb]
+    
     trainer = Trainer(
         max_epochs=cfg.trainer.max_epochs,
         accelerator="auto",
         devices="auto",
         precision="bf16-mixed" if cfg.get("bf16", False) else 32,
-        callbacks=[ckpt_cb, lr_monitor, early_stop_cb],
+        callbacks=callbacks,
         log_every_n_steps=1,
+        reload_dataloaders_every_n_epochs=1,
     )
 
     trainer.fit(model, datamodule=data_module)

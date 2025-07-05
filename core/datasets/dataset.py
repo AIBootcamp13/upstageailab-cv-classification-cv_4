@@ -105,14 +105,19 @@ class DatasetModule(LightningDataModule):
         if stage in ("fit", None):
             self.full_df = pd.read_csv(os.path.join(self.data_path, "train.csv"))
 
+             # for kfold validation train
             if self.train_idx is not None and self.val_idx is not None:
                 self.train_df = self.full_df.iloc[self.train_idx].reset_index(drop=True)
                 self.val_df = self.full_df.iloc[self.val_idx].reset_index(drop=True)
             else:
                 targets = self.full_df["target"].tolist()
-                self.train_df, self.val_df = train_test_split(
-                    self.full_df, test_size=0.2, stratify=targets, random_state=42
+                indices = list(range(len(targets)))
+                train_idx, val_idx = train_test_split(
+                    indices, test_size=0.2, stratify=targets, random_state=42
                 )
+                self.train_df = self.full_df.iloc[train_idx].reset_index(drop=True)
+                self.val_df = self.full_df.iloc[val_idx].reset_index(drop=True)
+                self.set_split_idx(train_idx, val_idx)
 
             self.train_ds = ImageDataset(
                 self.train_df, os.path.join(self.data_path, "train"), transform=self.train_tf

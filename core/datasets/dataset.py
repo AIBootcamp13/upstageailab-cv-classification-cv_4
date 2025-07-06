@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from typing import Tuple
 
+import cv2
 import albumentations as A
 import pandas as pd
 import numpy as np
@@ -20,32 +21,8 @@ from torch.utils.data import DataLoader, Dataset
 from hydra.utils import instantiate
 from sklearn.model_selection import train_test_split
 
-class ImageDataset(Dataset):
-    def __init__(self, data, path, transform=None, is_test=False):
-        if isinstance(data, (str, Path)):
-            self.df = pd.read_csv(data).values
-        else:
-            self.df = data.values
-        self.path = path
-        self.transform = transform
+from core.datasets.datasets import ImageDataset, AugraphyImageDataset
 
-        self.samples = []
-        if is_test:
-            pass
-        else:
-            for name, target in self.df:
-                self.samples.append((name, target))
-
-    def __len__(self):
-        return len(self.df)
-
-    def __getitem__(self, idx):
-        name, target = self.df[idx]
-        img = np.array(Image.open(os.path.join(self.path, name)))
-        if self.transform:
-            img = self.transform(image=img)['image']
-        return img, target
-    
 class DatasetModule(LightningDataModule):
     def __init__(self, cfg):
         super().__init__()
@@ -55,7 +32,7 @@ class DatasetModule(LightningDataModule):
         self.img_size = cfg.data.img_size
         self.data_path = cfg.data.data_path
 
-        self.train_tf = Compose([
+        train_tf =  Compose([
             # 크롭/회전/플립
             RandomResizedCrop(size=(self.img_size, self.img_size), scale=(0.8, 1.0), p=1.0),
             HorizontalFlip(p=0.5),
@@ -82,22 +59,55 @@ class DatasetModule(LightningDataModule):
             Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
             ToTensorV2()
         ])
+
+        self.train_tf = {"Augraphy" : 
+                         Compose([
+                            # 크롭/회전/플립
+                            RandomResizedCrop(size=(self.img_size, self.img_size), scale=(0.8, 1.0), p=1.0),
+                            HorizontalFlip(p=0.5),
+                            VerticalFlip(p=0.3),
+                            Rotate(limit=15, p=0.5),
+                            
+                            # 정규화 + Tensor
+                            Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+                            ToTensorV2()]), 
+                        "NoAugraphy": train_tf}
+
         # --- Validation / Test --------------------------------------------------
-        self.val_tf = Compose(
+        val_tf = Compose(
             [
                 Resize(self.img_size, self.img_size),
                 Normalize(mean=(0.485, 0.456, 0.406),
                         std=(0.229, 0.224, 0.225)),
                 ToTensorV2(),
-            ]
-        )
+            ])
 
-        self.test_tf = self.val_tf
+        if self.cfg.trainer.use_augraphy:
+            self.val_tf = {"Augraphy" : val_tf, "NoAugraphy": val_tf}
+        else:
+            self.val_tf = val_tf
+
+        self.test_tf = val_tf
 
         self.train_idx = None
         self.val_idx = None
         self.train_df = None
         self.val_df = None
+
+
+        if self.cfg.trainer.use_augraphy:
+            print("Using Augraphy")
+            seed = 2025
+            self.dataset_cls = AugraphyImageDataset
+            self.full_data_name = f"train_augraphy_{seed}"
+            self.full_df = pd.read_csv(os.path.join(self.data_path, self.full_data_name + ".csv"))
+        else:
+            self.dataset_cls = ImageDataset
+            self.full_data_name = "train"
+            self.full_df = pd.read_csv(os.path.join(self.data_path, self.full_data_name + ".csv"))
+
+        self.orig_df = pd.read_csv(os.path.join(self.data_path, "train.csv"))
+        self.origin_dataset = self.dataset_cls(self.orig_df, os.path.join(self.data_path, self.full_data_name), None)
     
     def set_split_idx(self, train_idx, val_idx):
         self.train_idx = train_idx
@@ -105,39 +115,68 @@ class DatasetModule(LightningDataModule):
 
     def setup(self, stage: str | None = None):
         if stage in ("fit", None):
-            self.full_df = pd.read_csv(os.path.join(self.data_path, "train.csv"))
-
              # for kfold validation train
             if self.train_idx is not None and self.val_idx is not None:
-                self.train_df = self.full_df.iloc[self.train_idx].reset_index(drop=True)
-                self.val_df = self.full_df.iloc[self.val_idx].reset_index(drop=True)
+                # self.train_df = self.full_df.iloc[self.train_idx].reset_index(drop=True)
+                # self.val_df = self.full_df.iloc[self.val_idx].reset_index(drop=True)
+
+                # train_df : origin train idx + aug train + idx 
+                # val_df : origin val idx 
+
+                train_df_orig = self.orig_df.iloc[self.train_idx].reset_index(drop=True)
+                val_df = self.orig_df.iloc[self.val_idx].reset_index(drop=True)
+
+                train_ids = set(train_df_orig["ID"])
+                aug_df = self.full_df[
+                    self.full_df["ID"].str.startswith("aug_") &
+                    self.full_df["ID"].str[4:].isin(train_ids)
+                ].reset_index(drop=True)
+
+                self.train_df = pd.concat([train_df_orig, aug_df]).reset_index(drop=True)
+                self.val_df = val_df
+
+                assert self.val_df["ID"].str.startswith("aug_").sum() == 0
             else:
-                targets = self.full_df["target"].tolist()
-                indices = list(range(len(targets)))
                 train_idx, val_idx = train_test_split(
-                    indices, test_size=0.2, stratify=targets, random_state=42
+                    self.orig_df.index, test_size=0.2, stratify=self.orig_df["target"], random_state=42
                 )
-                self.train_df = self.full_df.iloc[train_idx].reset_index(drop=True)
-                self.val_df = self.full_df.iloc[val_idx].reset_index(drop=True)
+                
+                # train_df : origin train idx + aug train + idx 
+                # val_df : origin val idx 
+
+                train_df_orig = self.orig_df.iloc[train_idx].reset_index(drop=True)
+                val_df = self.orig_df.iloc[val_idx].reset_index(drop=True)
+
+                train_ids = set(train_df_orig["ID"])
+                aug_df = self.full_df[
+                    self.full_df["ID"].str.startswith("aug_") &
+                    self.full_df["ID"].str[4:].isin(train_ids)
+                ].reset_index(drop=True)
+
+                self.train_df = pd.concat([train_df_orig, aug_df]).reset_index(drop=True)
+                self.val_df = val_df
+
+                assert self.val_df["ID"].str.startswith("aug_").sum() == 0
+                
                 self.set_split_idx(train_idx, val_idx)
 
-            self.train_ds = ImageDataset(
-                self.train_df, os.path.join(self.data_path, "train"), transform=self.train_tf
+            self.train_ds = self.dataset_cls(
+                self.train_df, os.path.join(self.data_path, self.full_data_name), transform=self.train_tf
             )
-            self.val_ds = ImageDataset(
-                self.val_df, os.path.join(self.data_path, "train"), transform=self.val_tf
+            self.val_ds = self.dataset_cls(
+                self.val_df, os.path.join(self.data_path, self.full_data_name), transform=self.val_tf
             )
 
         if stage in ("test", "predict", None):
             df = pd.read_csv(os.path.join(self.data_path, "sample_submission.csv"))
-            self.test_ds = ImageDataset(
-                df, os.path.join(self.data_path, "test"), transform=self.test_tf
+            self.test_ds = self.dataset_cls(
+                df, os.path.join(self.data_path, "test"), transform=self.test_tf, is_test=True
             )
 
     def set_train_dataset(self, new_df):
-        self.train_ds = ImageDataset(
+        self.train_ds = self.dataset_cls(
             new_df, 
-            os.path.join(self.data_path, "train"),
+            os.path.join(self.data_path, self.full_data_name),
             transform=self.train_tf,
         )
 

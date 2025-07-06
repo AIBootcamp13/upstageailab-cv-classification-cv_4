@@ -6,3 +6,4 @@ use_mixup: true
 hnm:
   use_hnm: true
   stop_epoch: 15
+use_augraphy: true

@@ -3,8 +3,6 @@ from typing import List
 import pandas as pd
 from pytorch_lightning import Callback
 
-from core.datasets.dataset import ImageDataset
-
 class HNMCallback(Callback):
     def __init__(self,
                  base_df: pd.DataFrame,

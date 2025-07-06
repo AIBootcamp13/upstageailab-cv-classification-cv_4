@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import StratifiedKFold
 
-from core.datasets.dataset import DatasetModule, ImageDataset
+from core.datasets.dataset import DatasetModule
 from core.trainer.trainer import TrainerModule
 from core.trainer.HNMTrainer import HardNegativeMiningTrainerModule
 from core.callbacks.hardNegativeMining import HNMCallback
@@ -70,11 +70,8 @@ def main(cfg: DictConfig):
     seed_everything(cfg.seed if "seed" in cfg else 42, workers=True)
 
     data_module = DatasetModule(cfg)
-
-    data = pd.read_csv("./data/train.csv")
-    full_dataset = ImageDataset(data, './data/train', None)
-    
-    full_labels = [y for _, y in full_dataset]
+    origin_dataset = data_module.origin_dataset
+    origin_labels = [y for _, y in origin_dataset]
 
     kfold = StratifiedKFold(
         n_splits = 5,
@@ -82,7 +79,7 @@ def main(cfg: DictConfig):
         random_state=42
     )
 
-    for fold, (train_idx, val_idx) in enumerate(kfold.split(np.zeros(len(full_labels)), full_labels)):
+    for fold, (train_idx, val_idx) in enumerate(kfold.split(np.zeros(len(origin_labels)), origin_labels)):
         # run_name = f"{cfg.experiment_name}-fold{fold}"
         try:
             run_name = get_latest_run(project_name, cfg.experiment_name)

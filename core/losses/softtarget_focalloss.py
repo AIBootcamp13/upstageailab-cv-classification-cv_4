@@ -9,7 +9,7 @@ class SoftTargetFocalLoss(nn.Module):
         print('initialize SoftTargetFocalLoss')
         self.alpha = alpha
         self.gamma = gamma
-        self.reduction = reduction
+        self.default_reduction = reduction
 
         if self.alpha is not None:
             if isinstance(self.alpha, (DictConfig, ListConfig)):
@@ -17,7 +17,9 @@ class SoftTargetFocalLoss(nn.Module):
             if isinstance(self.alpha, list):
                 self.alpha = torch.tensor(self.alpha, dtype=torch.float32)
 
-    def forward(self, logits, targets):
+    def forward(self, logits, targets, reduction=None):
+        reduction = reduction or self.default_reduction
+
         alpha = self.alpha.to(targets.device)
         if targets.dim() == 1:
             targets = F.one_hot(targets, num_classes=logits.size(1)).float()
@@ -34,9 +36,9 @@ class SoftTargetFocalLoss(nn.Module):
 
         loss = fl.sum(dim=1)
 
-        if self.reduction == "mean":
+        if reduction == "mean":
             return loss.mean()
-        elif self.reduction == "sum":
+        elif reduction == "sum":
             return loss.sum()
         else:                                 
             return loss

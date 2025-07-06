@@ -119,11 +119,17 @@ def main(cfg: DictConfig):
     error_cb = ErrorAnalysisCallback(save_dir=os.path.join(project_path(), cfg.trainer.error.analysis.save_dir), 
                                      top_k=cfg.trainer.error.analysis.top_k)
 
-    tsne_cb = TSNECallback(save_dir=os.path.join(project_path(), cfg.trainer.error.tsne.save_dir))
+    tsne_cb = TSNECallback(num_classes=cfg.model.model.num_classes, 
+                           class_names=data_module.meta_df["class_name"].unique(), 
+                           save_dir=os.path.join(project_path(), cfg.trainer.error.tsne.save_dir), every_n_epoch=cfg.trainer.error.tsne.every_n_epoch)
 
-    pcl_cb = PerClassLossCallback(num_classes=cfg.model.model.num_classes, save_dir=os.path.join(project_path(), cfg.trainer.error.perclassloss.save_dir))
+    pcl_cb = PerClassLossCallback(num_classes=cfg.model.model.num_classes, 
+                                  class_names=data_module.meta_df["class_name"].unique(), 
+                                  save_dir=os.path.join(project_path(), cfg.trainer.error.perclassloss.save_dir))
 
-    cm_cb = ConfusionMatrixCallback(num_classes=cfg.model.model.num_classes, save_dir=os.path.join(project_path(), cfg.trainer.error.confusion_matrix.save_dir))
+    cm_cb = ConfusionMatrixCallback(num_classes=cfg.model.model.num_classes, 
+                                    class_names=data_module.meta_df["class_name"].unique(), 
+                                    save_dir=os.path.join(project_path(), cfg.trainer.error.confusion_matrix.save_dir))
 
     if cfg.trainer.hnm.use_hnm == True:
         hnm_cb = HNMCallback(data_module.train_df, train_idx=data_module.train_idx, cfg=cfg)

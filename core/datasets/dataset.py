@@ -94,10 +94,9 @@ class DatasetModule(LightningDataModule):
         self.train_df = None
         self.val_df = None
 
-
         if self.cfg.trainer.use_augraphy:
             print("Using Augraphy")
-            seed = 2025
+            seed = 42
             self.dataset_cls = AugraphyImageDataset
             self.full_data_name = f"train_augraphy_{seed}"
             self.full_df = pd.read_csv(os.path.join(self.data_path, self.full_data_name + ".csv"))
@@ -106,6 +105,7 @@ class DatasetModule(LightningDataModule):
             self.full_data_name = "train"
             self.full_df = pd.read_csv(os.path.join(self.data_path, self.full_data_name + ".csv"))
 
+        self.meta_df = pd.read_csv(os.path.join(self.data_path, "meta.csv"))
         self.orig_df = pd.read_csv(os.path.join(self.data_path, "train.csv"))
         self.origin_dataset = self.dataset_cls(self.orig_df, os.path.join(self.data_path, self.full_data_name), None)
     

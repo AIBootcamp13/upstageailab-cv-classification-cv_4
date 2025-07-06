@@ -1,4 +1,5 @@
 import os
+from typing import List
 
 import torch
 import matplotlib.pyplot as plt
@@ -6,10 +7,16 @@ import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from pytorch_lightning import LightningModule, Trainer, Callback
+from matplotlib import cm
 
 class TSNECallback(Callback):
-    def __init__(self, save_dir="error_tsne", every_n_epoch: int = 5, sample_limit: int = 1500):
+    def __init__(self, 
+                 num_classes: int, 
+                 class_names: List[str] | None = None,
+                 save_dir="error_tsne", every_n_epoch: int = 5, sample_limit: int = 1500):
         super().__init__()
+        self.num_classes = num_classes
+        self.class_names     = class_names if class_names is not None else [str(i) for i in range(num_classes)]
         self.every_n_epoch = every_n_epoch
         self.sample_limit = sample_limit
         self.save_dir = save_dir
@@ -19,16 +26,19 @@ class TSNECallback(Callback):
         epoch = trainer.current_epoch
         if (epoch + 1) % self.every_n_epoch != 0:
             return
-        
+
         pl_module.eval()
+
         feats, labels = [], []
         collected = 0
-
         val_loader = trainer.datamodule.val_dataloader()
+
         for x, y in val_loader:
             x = x.to(pl_module.device, non_blocking=True)
 
-            f = pl_module.backbone.forward_features(x) 
+            f = pl_module.model.backbone.forward_features(x)
+            if f.ndim == 4:
+                f = torch.nn.functional.adaptive_avg_pool2d(f, 1).squeeze(-1).squeeze(-1)
 
             feats.append(f.cpu())
             labels.append(y.cpu())
@@ -36,22 +46,42 @@ class TSNECallback(Callback):
             collected += f.size(0)
             if collected >= self.sample_limit:
                 break
-        
-        feats = torch.cat(feats)[: self.sample_limit].numpy()
-        labels = torch.cat(labels)[: self.sample_limit].numpy()
 
+        feats  = torch.cat(feats)[: self.sample_limit]
+        labels = torch.cat(labels)[: self.sample_limit]
+
+        # one-hot 또는 soft-label → argmax
+        if labels.ndim == 2:
+            labels = torch.argmax(labels, dim=1)
+
+        feats  = feats.numpy()
+        labels = labels.numpy()
+
+        # ── t-SNE 계산 ─────────────────────
         feats_50 = PCA(n_components=50, random_state=42).fit_transform(feats)
-        emb = TSNE(n_components=2, perplexity=30, n_iter=500, random_state=42).fit_transform(feats_50)
+        emb = TSNE(n_components=2, perplexity=30, n_iter=500,
+                   random_state=42).fit_transform(feats_50)
 
-        fig, ax = plt.subplots(figsize=(6, 6))
-        sc = ax.scatter(emb[:, 0], emb[:, 1],
-                        c=labels, s=6, cmap="tab20", alpha=0.85)
+        # ── 시각화 ─────────────────────────
+        fig, ax = plt.subplots(figsize=(8, 8))
+        cmap = cm.get_cmap("tab20", self.num_classes)
+
+        for c in range(self.num_classes):
+            idx = labels == c
+            if idx.any():
+                ax.scatter(
+                    emb[idx, 0], emb[idx, 1],
+                    s=10, alpha=0.8, color=cmap(c),
+                    label=self.class_names[c]
+                )
+
         ax.set_title(f"t-SNE (val) @ epoch {epoch}")
         ax.axis("off")
+        ax.legend(fontsize=8, loc="best", frameon=False, markerscale=2)
 
-        if self.save_dir:
-            os.makedirs(self.save_dir, exist_ok=True)
-            fig_path = os.path.join(self.save_dir, f"tsne_epoch_{epoch:03d}.png")
-            fig.savefig(fig_path, dpi=150, bbox_inches="tight")
-
+        # ── 저장 ───────────────────────────
+        os.makedirs(self.save_dir, exist_ok=True)
+        fig.savefig(os.path.join(self.save_dir,
+                                 f"tsne_epoch_{epoch:03d}.png"),
+                    dpi=150, bbox_inches="tight")
         plt.close(fig)

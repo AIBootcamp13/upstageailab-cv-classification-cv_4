@@ -168,7 +168,7 @@ class HardNegativeMiningTrainerModule(LightningModule):
         f1_metric.update(logits, y_hard)
     
         self.log(f"{stage}_loss", loss, prog_bar=(stage == "val"), on_step=False, on_epoch=True)
-        return loss
+        return {"logits": logits, "targets": y, "loss": loss}
 
     def training_step(self, batch, batch_idx):
         return self._shared_step(batch, "train")
@@ -188,11 +188,11 @@ class HardNegativeMiningTrainerModule(LightningModule):
         if self.cfg.trainer.use_ema == True and self.ema is not None:
             backup_state = {k: v.detach().clone() for k, v in self.model.state_dict().items()}
             self.model.load_state_dict(self.ema.state_dict())
-            loss = self._shared_step(batch, "val")
+            out = self._shared_step(batch, "val")
             self.model.load_state_dict(backup_state)
-            return loss
+            return out
         
-        self._shared_step(batch, "val")
+        return self._shared_step(batch, "val")
 
     def predict_step(self, batch, batch_idx):
         x, _ = batch

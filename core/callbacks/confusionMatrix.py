@@ -53,9 +53,14 @@ class ConfusionMatrixCallback(Callback):
         cm = confusion_matrix(targets, preds, labels=range(self.num_classes))
         cm_norm = cm.astype("float") / (cm.sum(axis=1, keepdims=True) + 1e-8)
 
-        fig, ax = plt.subplots(figsize=(6, 5))
+        fig, ax = plt.subplots(figsize=(14, 12))
         disp = ConfusionMatrixDisplay(confusion_matrix=cm_norm, display_labels=self.class_names)
-        disp.plot(include_values=True, cmap="Blues", ax=ax, colorbar=True, xticks_rotation=45)
+
+        disp.plot(include_values=True, cmap="Blues", ax=ax, colorbar=True)
+
+        ax.set_xticklabels(self.class_names, rotation=45, ha="right", fontsize=8)
+        ax.set_yticklabels(self.class_names, rotation=0, fontsize=8)
+
         ax.set_title(f"Confusion Matrix @ epoch {epoch}")
         plt.tight_layout()
 

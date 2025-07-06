@@ -17,7 +17,8 @@ class FocalLoss(nn.Module):
             if isinstance(self.alpha, list):
                 self.alpha = torch.tensor(self.alpha, dtype=torch.float32)
         
-    def forward(self, logits, targets):
+    def forward(self, logits, targets, reduction=None):
+        reduction = reduction or self.default_reduction
         alpha = self.alpha.to(targets.device)
         # self.gamma = self.gamma.to(logits.device)
 
@@ -31,9 +32,9 @@ class FocalLoss(nn.Module):
 
         fl = at * (1 - pt) ** self.gamma * ce_loss
 
-        if self.reduction == "mean":
+        if reduction == "mean":
             return fl.mean()
-        elif self.reduction == "sum":
+        elif reduction == "sum":
             return fl.sum()
         else:                                 
             return fl

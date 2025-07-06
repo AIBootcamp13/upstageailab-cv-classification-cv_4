@@ -23,6 +23,7 @@ from core.callbacks.hardNegativeMining import HNMCallback
 from core.callbacks.errorAnalysis import ErrorAnalysisCallback
 from core.callbacks.tsne import TSNECallback
 from core.callbacks.perClassLoss import PerClassLossCallback
+from core.callbacks.confusionMatrix import ConfusionMatrixCallback
 from core.utils.utils import auto_increment_run_suffix, project_path
 
 def get_runs(project_name):
@@ -120,13 +121,15 @@ def main(cfg: DictConfig):
 
     tsne_cb = TSNECallback(save_dir=os.path.join(project_path(), cfg.trainer.error.tsne.save_dir))
 
-    pcl_cb = PerClassLossCallback(save_dir=os.path.join(project_path(), cfg.trainer.error.perclassloss.save_dir))
+    pcl_cb = PerClassLossCallback(num_classes=cfg.model.model.num_classes, save_dir=os.path.join(project_path(), cfg.trainer.error.perclassloss.save_dir))
+
+    cm_cb = ConfusionMatrixCallback(num_classes=cfg.model.model.num_classes, save_dir=os.path.join(project_path(), cfg.trainer.error.confusion_matrix.save_dir))
 
     if cfg.trainer.hnm.use_hnm == True:
         hnm_cb = HNMCallback(data_module.train_df, train_idx=data_module.train_idx, cfg=cfg)
-        callbacks = [ckpt_cb, lr_monitor, early_stop_cb, hnm_cb, error_cb, tsne_cb, pcl_cb]
+        callbacks = [ckpt_cb, lr_monitor, early_stop_cb, hnm_cb, error_cb, tsne_cb, pcl_cb, cm_cb]
     else:
-        callbacks = [ckpt_cb, lr_monitor, early_stop_cb, error_cb, tsne_cb, pcl_cb]
+        callbacks = [ckpt_cb, lr_monitor, early_stop_cb, error_cb, tsne_cb, pcl_cb, cm_cb]
     
     trainer = Trainer(
         max_epochs=cfg.trainer.max_epochs,

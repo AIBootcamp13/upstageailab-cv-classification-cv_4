@@ -15,3 +15,5 @@ error:
     save_dir: error_logs/tsne
   perclassloss:
     save_dir: error_logs/perclassloss
+  confusion_matrix:
+    save_dir: error_logs/confusion_matrix

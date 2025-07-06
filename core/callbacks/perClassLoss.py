@@ -1,9 +1,9 @@
 import os
+from collections import defaultdict
 
 import torch
 import matplotlib.pyplot as plt
 from pytorch_lightning import Callback, Trainer, LightningModule
-from collections import defaultdict
 import numpy as np
 
 class PerClassLossCallback(Callback):

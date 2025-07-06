@@ -13,3 +13,5 @@ error:
     top_k: 10
   tsne:
     save_dir: error_logs/tsne
+  perclassloss:
+    save_dir: error_logs/perclassloss

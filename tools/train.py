@@ -20,7 +20,8 @@ from core.datasets.dataset import DatasetModule
 from core.trainer.trainer import TrainerModule
 from core.trainer.HNMTrainer import HardNegativeMiningTrainerModule
 from core.callbacks.hardNegativeMining import HNMCallback
-from core.utils.utils import auto_increment_run_suffix
+from core.callbacks.errorAnalysis import ErrorAnalysisCallback
+from core.utils.utils import auto_increment_run_suffix, project_path
 
 def get_runs(project_name):
     return wandb.Api().runs(path=project_name, order="-created_at")
@@ -111,12 +112,14 @@ def main(cfg: DictConfig):
     lr_monitor = LearningRateMonitor(logging_interval="step")
 
     early_stop_cb = EarlyStopping(monitor=cfg.callback.monitor, mode=cfg.callback.mode, patience=cfg.callback.patience, min_delta=0.0005, verbose=True)
+    
+    error_cb = ErrorAnalysisCallback(save_dir=os.path.join(project_path(), cfg.trainer.error.save_dir), top_k=cfg.trainer.error.top_k)
 
     if cfg.trainer.hnm.use_hnm == True:
         hnm_cb = HNMCallback(data_module.train_df, train_idx=data_module.train_idx, cfg=cfg)
-        callbacks = [ckpt_cb, lr_monitor, early_stop_cb, hnm_cb]
+        callbacks = [ckpt_cb, lr_monitor, early_stop_cb, hnm_cb, error_cb]
     else:
-        callbacks = [ckpt_cb, lr_monitor, early_stop_cb]
+        callbacks = [ckpt_cb, lr_monitor, early_stop_cb, error_cb]
     
     trainer = Trainer(
         max_epochs=cfg.trainer.max_epochs,

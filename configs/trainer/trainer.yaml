@@ -7,3 +7,6 @@ hnm:
   use_hnm: true
   stop_epoch: 15
 use_augraphy: true
+error:
+  save_dir: error_logs
+  top_k: 10

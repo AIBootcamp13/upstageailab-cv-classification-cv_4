@@ -102,40 +102,6 @@ class HardNegativeMiningTrainerModule(LightningModule):
     def on_predict_start(self):
         if self.cfg.trainer.use_ema == True and self.ema is not None:
             self.ema.ema_model.to(self.device)
-    
-    def _shared_step_mixup_hnm(self, batch, stage: str):
-        x, y = batch
-
-        mixup_active = False
-        if stage == "train":
-            if self.mixup is not None:
-                mixup_active = True
-        
-        if self.cfg.model.model.arcFace:
-            logits = self.model.forward(x, y)
-        else:
-            logits = self.model.forward(x)
-        loss = self.criterion(logits, y)
-
-        if stage == "train" and not mixup_active:
-            with torch.no_grad():
-                hard = y if y.ndim == 1 else y.argmax(1)
-                l_each = F.cross_entropy(logits, hard, reduction="none")
-                for cls in range(self.cfg.model.model.num_classes):
-                    mask = hard == cls
-                    if mask.any():
-                        self._cls_loss_sum[cls]   += l_each[mask].sum()
-                        self._cls_sample_cnt[cls] += mask.sum()
-
-        y_hard = y.argmax(1) if y.ndim == 2 else y
-
-        acc_metric = getattr(self, f"{stage}_acc")
-        f1_metric = getattr(self, f"{stage}_f1")
-        acc_metric.update(logits, y_hard)
-        f1_metric.update(logits, y_hard)
-    
-        self.log(f"{stage}_loss", loss, prog_bar=(stage == "val"), on_step=False, on_epoch=True)
-        return loss
 
     def _shared_step(self, batch, stage: str):
         x, y = batch

@@ -24,24 +24,7 @@ from core.callbacks.errorAnalysis import ErrorAnalysisCallback
 from core.callbacks.tsne import TSNECallback
 from core.callbacks.perClassLoss import PerClassLossCallback
 from core.callbacks.confusionMatrix import ConfusionMatrixCallback
-from core.utils.utils import auto_increment_run_suffix, project_path
-
-def get_runs(project_name):
-    return wandb.Api().runs(path=project_name, order="-created_at")
-
-def get_latest_run(project_name, experiment_name):
-    runs = get_runs(project_name)
-
-    filtered = [
-        run for run in runs
-        if run.config.get("experiment_name") == experiment_name
-    ]
-
-    if not filtered:
-        default_name = f"{experiment_name.replace('_', '-')}-000"
-        return default_name
-    
-    return filtered[0].name
+from core.utils.utils import auto_increment_run_suffix, get_latest_run, project_path, make_error_run_dir
 
 @hydra.main(version_base=None, config_path="../configs", config_name="config")
 def main(cfg: DictConfig):
@@ -116,20 +99,25 @@ def main(cfg: DictConfig):
 
     early_stop_cb = EarlyStopping(monitor=cfg.callback.monitor, mode=cfg.callback.mode, patience=cfg.callback.patience, min_delta=0.0005, verbose=True)
     
-    error_cb = ErrorAnalysisCallback(save_dir=os.path.join(project_path(), cfg.trainer.error.analysis.save_dir), 
+    error_root_dir = make_error_run_dir()
+
+    error_cb = ErrorAnalysisCallback(num_classes=cfg.model.model.num_classes, 
+                                     class_names=data_module.meta_df["class_name"].unique(), 
+                                     save_dir=os.path.join(project_path(), error_root_dir, cfg.trainer.error.analysis.save_dir), 
                                      top_k=cfg.trainer.error.analysis.top_k)
 
     tsne_cb = TSNECallback(num_classes=cfg.model.model.num_classes, 
                            class_names=data_module.meta_df["class_name"].unique(), 
-                           save_dir=os.path.join(project_path(), cfg.trainer.error.tsne.save_dir), every_n_epoch=cfg.trainer.error.tsne.every_n_epoch)
+                           save_dir=os.path.join(project_path(), error_root_dir, cfg.trainer.error.tsne.save_dir), 
+                           every_n_epoch=cfg.trainer.error.tsne.every_n_epoch)
 
     pcl_cb = PerClassLossCallback(num_classes=cfg.model.model.num_classes, 
                                   class_names=data_module.meta_df["class_name"].unique(), 
-                                  save_dir=os.path.join(project_path(), cfg.trainer.error.perclassloss.save_dir))
+                                  save_dir=os.path.join(project_path(), error_root_dir, cfg.trainer.error.perclassloss.save_dir))
 
     cm_cb = ConfusionMatrixCallback(num_classes=cfg.model.model.num_classes, 
                                     class_names=data_module.meta_df["class_name"].unique(), 
-                                    save_dir=os.path.join(project_path(), cfg.trainer.error.confusion_matrix.save_dir))
+                                    save_dir=os.path.join(project_path(), error_root_dir, cfg.trainer.error.confusion_matrix.save_dir))
 
     if cfg.trainer.hnm.use_hnm == True:
         hnm_cb = HNMCallback(data_module.train_df, train_idx=data_module.train_idx, cfg=cfg)

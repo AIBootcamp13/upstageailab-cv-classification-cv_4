@@ -22,24 +22,11 @@ from core.datasets.dataset import DatasetModule
 from core.trainer.trainer import TrainerModule
 from core.trainer.HNMTrainer import HardNegativeMiningTrainerModule
 from core.callbacks.hardNegativeMining import HNMCallback
-from core.utils.utils import auto_increment_run_suffix
-
-def get_runs(project_name):
-    return wandb.Api().runs(path=project_name, order="-created_at")
-
-def get_latest_run(project_name, experiment_name):
-    runs = get_runs(project_name)
-
-    filtered = [
-        run for run in runs
-        if run.config.get("experiment_name") == experiment_name
-    ]
-
-    if not filtered:
-        default_name = f"{experiment_name.replace('_', '-')}-000"
-        return default_name
-    
-    return filtered[0].name
+from core.callbacks.errorAnalysis import ErrorAnalysisCallback
+from core.callbacks.tsne import TSNECallback
+from core.callbacks.perClassLoss import PerClassLossCallback
+from core.callbacks.confusionMatrix import ConfusionMatrixCallback
+from core.utils.utils import auto_increment_run_suffix, get_latest_run, project_path, make_error_run_dir
 
 @hydra.main(version_base=None, config_path="../configs", config_name="config")
 def main(cfg: DictConfig):
@@ -78,6 +65,8 @@ def main(cfg: DictConfig):
         shuffle=True,
         random_state=42
     )
+
+    error_root_dir = make_error_run_dir()
 
     for fold, (train_idx, val_idx) in enumerate(kfold.split(np.zeros(len(origin_labels)), origin_labels)):
         # run_name = f"{cfg.experiment_name}-fold{fold}"
@@ -134,11 +123,29 @@ def main(cfg: DictConfig):
 
         early_stop_cb = EarlyStopping(monitor=cfg.callback.monitor, mode=cfg.callback.mode, patience=cfg.callback.patience, min_delta=0.0005, verbose=True)
 
+        error_cb = ErrorAnalysisCallback(num_classes=cfg.model.model.num_classes, 
+                                         class_names=data_module.meta_df["class_name"].unique(), 
+                                         save_dir=os.path.join(project_path(), error_root_dir, f"{cfg.trainer.error.analysis.save_dir}_fold_{fold}"), 
+                                         top_k=cfg.trainer.error.analysis.top_k)
+
+        tsne_cb = TSNECallback(num_classes=cfg.model.model.num_classes, 
+                            class_names=data_module.meta_df["class_name"].unique(), 
+                            save_dir=os.path.join(project_path(), error_root_dir, f"{cfg.trainer.error.tsne.save_dir}_fold_{fold}"), 
+                            every_n_epoch=cfg.trainer.error.tsne.every_n_epoch)
+
+        pcl_cb = PerClassLossCallback(num_classes=cfg.model.model.num_classes, 
+                                    class_names=data_module.meta_df["class_name"].unique(), 
+                                    save_dir=os.path.join(project_path(), error_root_dir, f"{cfg.trainer.error.perclassloss.save_dir}_fold_{fold}"))
+
+        cm_cb = ConfusionMatrixCallback(num_classes=cfg.model.model.num_classes, 
+                                        class_names=data_module.meta_df["class_name"].unique(), 
+                                        save_dir=os.path.join(project_path(), error_root_dir, f"{cfg.trainer.error.confusion_matrix.save_dir}_fold_{fold}"))
+    
         if cfg.trainer.hnm.use_hnm == True:
-            hnm_cb = HNMCallback(data_module.train_df, train_idx=train_idx, cfg=cfg)
-            callbacks = [ckpt_cb, lr_monitor, early_stop_cb, hnm_cb]
+            hnm_cb = HNMCallback(data_module.train_df, train_idx=data_module.train_idx, cfg=cfg)
+            callbacks = [ckpt_cb, lr_monitor, early_stop_cb, hnm_cb, error_cb, tsne_cb, pcl_cb, cm_cb]
         else:
-            callbacks = [ckpt_cb, lr_monitor, early_stop_cb]
+            callbacks = [ckpt_cb, lr_monitor, early_stop_cb, error_cb, tsne_cb, pcl_cb, cm_cb]
 
         trainer = Trainer(
             max_epochs=cfg.trainer.max_epochs,

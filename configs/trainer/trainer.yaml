@@ -8,5 +8,8 @@ hnm:
   stop_epoch: 15
 use_augraphy: true
 error:
-  save_dir: error_logs
-  top_k: 10
+  analysis:
+    save_dir: error_logs/analysis
+    top_k: 10
+  tsne:
+    save_dir: error_logs/tsne

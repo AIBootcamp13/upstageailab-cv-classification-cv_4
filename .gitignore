@@ -662,3 +662,4 @@ FodyWeavers.xsd
 outputs/
 wandb/
 augraphy_cache/
+error_logs/

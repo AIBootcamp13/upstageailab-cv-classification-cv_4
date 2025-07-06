@@ -1,6 +1,6 @@
 model:
   _target_: timm.create_model
-  model_name: "deit_base_patch16_224"
+  model_name: "convnextv2_base.fcmae_ft_in22k_in1k_384"
   num_classes: 17
   pretrained: true
-  arcFace: false
+  arcFace: true

@@ -29,6 +29,7 @@ from core.models.resnet50 import Resnet50
 from core.models.vit import ViT
 from core.models.swinTransformer import SwinTransformer
 from core.models.efficientnet import EfficientNet
+from core.models.convnextArcFace import ConvNeXtArcFace
 from core.losses.focalloss import FocalLoss
 from core.losses.softtarget_focalloss import SoftTargetFocalLoss
 from core.callbacks.ema import EMA
@@ -39,7 +40,10 @@ class HardNegativeMiningTrainerModule(LightningModule):
         self.cfg = cfg
 
         if "convnext" in cfg.model.model.model_name:
-            self.model = ConvNeXt(cfg)
+            if cfg.model.model.arcFace:
+                self.model = ConvNeXtArcFace(cfg)
+            else:
+                self.model = ConvNeXt(cfg)
         elif "resnet50" in cfg.model.model.model_name:
             self.model = Resnet50(cfg)
         elif "deit" in cfg.model.model.model_name:
@@ -107,7 +111,10 @@ class HardNegativeMiningTrainerModule(LightningModule):
             if self.mixup is not None:
                 mixup_active = True
         
-        logits = self(x)
+        if self.cfg.model.model.arcFace:
+            logits = self.model.forward(x, y)
+        else:
+            logits = self.model.forward(x)
         loss = self.criterion(logits, y)
 
         if stage == "train" and not mixup_active:
@@ -141,7 +148,11 @@ class HardNegativeMiningTrainerModule(LightningModule):
                 if self.mixup is not None:
                     x, y = self.mixup(x, y)
 
-        logits = self(x)
+
+        if self.cfg.model.model.arcFace:
+            logits = self.model.forward(x, y)
+        else:
+            logits = self.model.forward(x)  
         loss = self.criterion(logits, y)
 
         # for hard negative mining

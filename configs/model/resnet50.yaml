@@ -3,3 +3,4 @@ model:
   model_name: resnet50
   num_classes: 17
   pretrained: true
+  arcFace: false

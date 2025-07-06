@@ -3,3 +3,4 @@ model:
   model_name: "tf_efficientnet_b3_ns"
   num_classes: 17
   pretrained: true
+  arcFace: false

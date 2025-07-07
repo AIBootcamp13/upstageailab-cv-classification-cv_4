@@ -18,6 +18,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 import torch.nn.functional as F  
 from torch.optim import Adam, AdamW
 from torch.utils.data import DataLoader, Dataset
+from torch.distributions.beta import Beta
 from hydra.utils import instantiate
 from sklearn.model_selection import train_test_split
 from transformers import get_cosine_schedule_with_warmup
@@ -41,7 +42,7 @@ class HardNegativeMiningTrainerModule(LightningModule):
 
         if "convnext" in cfg.model.model.model_name:
             if cfg.model.model.arcFace:
-                self.model = ConvNeXtArcFace(cfg)
+                self.model = ConvNeXtArcFace(cfg.model.model.num_classes)
             else:
                 self.model = ConvNeXt(cfg)
         elif "resnet50" in cfg.model.model.model_name:
@@ -57,8 +58,9 @@ class HardNegativeMiningTrainerModule(LightningModule):
             self.criterion = FocalLoss(**cfg.loss.loss)
         elif cfg.loss.loss_name == "softtarget_focalloss":
             self.criterion = SoftTargetFocalLoss(**cfg.loss.loss)
-
-        # self.criterion = nn.CrossEntropyLoss()
+        
+        if cfg.model.model.arcFace:
+            self.criterion = nn.CrossEntropyLoss()
 
         n_classes = cfg.model.model.num_classes
 
@@ -107,13 +109,11 @@ class HardNegativeMiningTrainerModule(LightningModule):
         x, y = batch
 
         if stage == "train":
-            if self.cfg.trainer.hnm.use_hnm:
-                if self.current_epoch >= self.cfg.trainer.hnm.stop_epoch:
-                    x, y = self.mixup(x, y)
-            else:
+            if self.current_epoch % 2 == 0:
+            # if self.cfg.trainer.hnm.use_hnm:
+            #     if self.current_epoch >= self.cfg.trainer.hnm.stop_epoch:
                 if self.mixup is not None:
                     x, y = self.mixup(x, y)
-
 
         if self.cfg.model.model.arcFace:
             logits = self.model.forward(x, y)
@@ -124,7 +124,8 @@ class HardNegativeMiningTrainerModule(LightningModule):
         # for hard negative mining
         # ── per-sample loss 누적 (mixup OFF일 때만)
         if stage == "train" and self.cfg.trainer.hnm.use_hnm:
-            if self.current_epoch < self.cfg.trainer.hnm.stop_epoch:
+            if self.current_epoch % 2 == 1:
+            # if self.current_epoch < self.cfg.trainer.hnm.stop_epoch:
                 with torch.no_grad():
                     hard = y
                     if y.ndim == 2:  
@@ -180,7 +181,7 @@ class HardNegativeMiningTrainerModule(LightningModule):
         return F.softmax(logits, dim=1)
 
     def on_train_epoch_end(self):
-        if self.current_epoch == self.cfg.trainer.freeze_epochs:
+        if self.current_epoch == self.cfg.model.model.freeze_epochs:
             print(f"Epoch {self.current_epoch+1}: Start Feature Extractor unfreeze and full-model fine-tuning")
             self.model.unfreeze()
 

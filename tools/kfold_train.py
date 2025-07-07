@@ -84,7 +84,7 @@ def main(cfg: DictConfig):
             config={
                 "experiment_name": cfg.experiment_name,
                 "model_name": cfg.model.model.model_name,
-                "freeze_epochs": cfg.trainer.freeze_epochs,
+                "freeze_epochs": cfg.model.model.freeze_epochs,
                 "batch_size": cfg.data.batch_size
             }
         )

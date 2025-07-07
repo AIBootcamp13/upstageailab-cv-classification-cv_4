@@ -58,7 +58,13 @@ class TSNECallback(Callback):
         labels = labels.numpy()
 
         # ── t-SNE 계산 ─────────────────────
-        feats_50 = PCA(n_components=50, random_state=42).fit_transform(feats)
+        n_samples, n_feats = feats.shape
+        n_pca = min(50, n_samples, n_feats)
+        if n_pca < 2:
+            print("[t-SNE] Too few samples for PCA")
+            return
+        
+        feats_50 = PCA(n_components=n_pca, random_state=42).fit_transform(feats)
         emb = TSNE(n_components=2, perplexity=30, n_iter=500,
                    random_state=42).fit_transform(feats_50)
 

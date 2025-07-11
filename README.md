@@ -43,45 +43,69 @@
 
 > 📁 해당 실험은 `eda/augmentation_analysis.ipynb` 및 `notebooks/preprocessing.ipynb`에서 확인할 수 있습니다.
 
+# 🧠 Document Classification - AI Bootcamp CV Competition
+
 ## 0. Overview
+
 ### Environment
-- _Write Development environment_
+
+- OS: Ubuntu 20.04.6 LTS
+- Python: 3.10.x
+- PyTorch: 2.0.1
+- CUDA: 11.7
+- Jupyter Notebook / VSCode for development
+- GPU: A100 / T4 (Google Colab, AI Stages 활용)
+- Model Training & Experiment Tracking: MLflow, TensorBoard
 
 ### Requirements
-- _Write Requirements_
 
-## 1. Competiton Info
+```bash
+pip install -r requirements.txt
+
+
+## 1. Competition Info
 
 ### Overview
 
-- _Write competition information_
+- **대회명**: 패스트캠퍼스 AI 부트캠프 13기 - CV 경진대회
+- **주제**: 문서 이미지 분류 (Document Classification)
+- **목표**: 학습 데이터(1,570장)를 활용하여 테스트 데이터(3,140장)를 17개 문서 클래스로 분류하는 모델 개발
+- **세부 내용**:
+  - 문서 종류는 금융, 의료, 보험, 물류 등 다양한 도메인 포함
+  - 문서 이미지의 회전, 조도 불균형, 노이즈 등 실제 사용 환경에서 발생할 수 있는 이슈를 고려해야 함
+  - 모델 구조부터 실험 전략, 협업 방식까지 전 과정을 팀원 주도로 구성
 
 ### Timeline
 
-- ex) January 10, 2024 - Start Date
-- ex) February 10, 2024 - Final submission deadline
+- 📌 2025.06.30 - 대회 시작 (문제 및 데이터 공개)
+- 📈 2025.07.01 ~ 2025.07.09 - 데이터 분석, 모델 학습 및 성능 개선
+- 📨 2025.07.10 - 최종 제출 마감
+- 🗣️ 2025.07.11 - 발표 및 회고 세션 진행
 
-## 2. Components
 
 ### Directory
 
-- _Insert your directory structure_
-
-e.g.
-```
 ├── code
 │   ├── jupyter_notebooks
 │   │   └── model_train.ipynb
-│   └── train.py
+│   ├── train.py
+│   ├── test.py
+│   └── utils/
+│       ├── data_utils.py
+│       └── model_utils.py
 ├── docs
-│   ├── pdf
-│   │   └── (Template) [패스트캠퍼스] Upstage AI Lab 1기_그룹 스터디 .pptx
+│   ├── presentation
+│   │   └── [패스트캠퍼스]-AI-부트캠프-13기_CV-경진대회-발표.pdf
 │   └── paper
-└── input
-    └── data
-        ├── eval
-        └── train
-```
+├── input
+│   └── data
+│       ├── train/
+│       ├── eval/
+│       └── test/
+├── output
+│   ├── models/
+│   └── predictions/
+└── README.md
 
 ## 3. Data descrption
 

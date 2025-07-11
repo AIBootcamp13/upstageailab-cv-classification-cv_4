@@ -50,7 +50,7 @@ pip install -r requirements.txt
 
 ### Directory
 
-'''bash
+'''
 ├── code
 │   ├── jupyter_notebooks
 │   │   └── model_train.ipynb

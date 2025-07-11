@@ -50,7 +50,7 @@ pip install -r requirements.txt
 
 ### Directory
 
-'''
+```
 ├── code
 │   ├── jupyter_notebooks
 │   │   └── model_train.ipynb
@@ -72,7 +72,8 @@ pip install -r requirements.txt
 │   ├── models/
 │   └── predictions/
 └── README.md
-'''
+```
+
 ## 3. Data descrption
 
 ### 🔍 문제점 분석
